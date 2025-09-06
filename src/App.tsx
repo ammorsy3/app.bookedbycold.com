@@ -1,6 +1,201 @@
 import React from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { FileText, DollarSign, Calendar, Zap, Info } from 'lucide-react';
+import { FileText, DollarSign, Calendar, Zap, Info, Database, Users, TrendingUp, BarChart3, Settings, ExternalLink, Activity, Target, CreditCard, Clock } from 'lucide-react';
+import PasswordProtection from './components/PasswordProtection';
+
+function ClientDashboard() {
+  const dashboardCards = [
+    {
+      title: 'CRM Dashboard',
+      description: 'Access your complete customer relationship management system',
+      icon: Database,
+      color: 'bg-blue-500',
+      hoverColor: 'hover:bg-blue-600',
+      link: '#', // Will be replaced with actual Airtable link
+      external: true,
+      stats: '1,247 contacts',
+    },
+    {
+      title: 'Financial Overview',
+      description: 'Monthly subscriptions, terms, and pricing details',
+      icon: DollarSign,
+      color: 'bg-green-500',
+      hoverColor: 'hover:bg-green-600',
+      link: '/finance',
+      external: false,
+      stats: '$116.00 due today',
+    },
+    {
+      title: 'Leads Dashboard',
+      description: 'Track and manage your lead generation pipeline',
+      icon: Target,
+      color: 'bg-purple-500',
+      hoverColor: 'hover:bg-purple-600',
+      link: '#', // Will be configured later
+      external: true,
+      stats: '89 new leads',
+    },
+    {
+      title: 'Campaign Analytics',
+      description: 'Monitor email campaigns and outreach performance',
+      icon: BarChart3,
+      color: 'bg-orange-500',
+      hoverColor: 'hover:bg-orange-600',
+      link: '#', // Will be configured later
+      external: true,
+      stats: '73% open rate',
+    },
+  ];
+
+  const quickStats = [
+    { label: 'Active Campaigns', value: '12', icon: Activity, color: 'text-blue-600' },
+    { label: 'Monthly Revenue', value: '$8,450', icon: TrendingUp, color: 'text-green-600' },
+    { label: 'Response Rate', value: '23%', icon: Target, color: 'text-purple-600' },
+    { label: 'Subscriptions', value: '7', icon: CreditCard, color: 'text-orange-600' },
+  ];
+
+  const recentActivity = [
+    { action: 'New lead generated', time: '2 minutes ago', type: 'lead' },
+    { action: 'Email campaign sent', time: '1 hour ago', type: 'campaign' },
+    { action: 'Payment processed', time: '3 hours ago', type: 'payment' },
+    { action: 'CRM updated', time: '5 hours ago', type: 'crm' },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">TLN Consulting Group</h1>
+              <p className="text-lg text-gray-600 mt-1">Client Dashboard</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-sm text-gray-500">Last updated</p>
+                <p className="text-sm font-medium text-gray-900">{new Date().toLocaleString()}</p>
+              </div>
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <Users className="w-5 h-5 text-blue-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {quickStats.map((stat) => (
+            <div key={stat.label} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">{stat.label}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+                </div>
+                <stat.icon className={`w-8 h-8 ${stat.color}`} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Main Dashboard Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {dashboardCards.map((card) => (
+            <div key={card.title} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200">
+              <div className="p-8">
+                <div className="flex items-start justify-between mb-6">
+                  <div className={`w-12 h-12 ${card.color} rounded-lg flex items-center justify-center`}>
+                    <card.icon className="w-6 h-6 text-white" />
+                  </div>
+                  {card.external && (
+                    <ExternalLink className="w-5 h-5 text-gray-400" />
+                  )}
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{card.title}</h3>
+                <p className="text-gray-600 mb-4">{card.description}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-500">{card.stats}</span>
+                  <a
+                    href={card.link}
+                    className={`inline-flex items-center gap-2 px-4 py-2 ${card.color} ${card.hoverColor} text-white rounded-lg font-medium transition-colors duration-200`}
+                    {...(card.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                  >
+                    Access
+                    {card.external ? <ExternalLink className="w-4 h-4" /> : <span>→</span>}
+                  </a>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Recent Activity & Quick Actions */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Recent Activity */}
+          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <Clock className="w-5 h-5 text-gray-600" />
+              <h3 className="text-lg font-bold text-gray-900">Recent Activity</h3>
+            </div>
+            <div className="space-y-4">
+              {recentActivity.map((activity, index) => (
+                <div key={index} className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 transition-colors duration-150">
+                  <div className={`w-2 h-2 rounded-full ${
+                    activity.type === 'lead' ? 'bg-purple-500' :
+                    activity.type === 'campaign' ? 'bg-blue-500' :
+                    activity.type === 'payment' ? 'bg-green-500' : 'bg-orange-500'
+                  }`} />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">{activity.action}</p>
+                    <p className="text-xs text-gray-500">{activity.time}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <Zap className="w-5 h-5 text-gray-600" />
+              <h3 className="text-lg font-bold text-gray-900">Quick Actions</h3>
+            </div>
+            <div className="space-y-3">
+              <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors duration-150">
+                <div className="flex items-center gap-3">
+                  <Users className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-gray-900">Add New Contact</span>
+                </div>
+              </button>
+              <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-colors duration-150">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-medium text-gray-900">View Reports</span>
+                </div>
+              </button>
+              <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-colors duration-150">
+                <div className="flex items-center gap-3">
+                  <Settings className="w-4 h-4 text-purple-600" />
+                  <span className="text-sm font-medium text-gray-900">Settings</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-12 pt-8 border-t border-gray-200 text-center">
+          <p className="text-sm text-gray-500">
+            Powered by BookedByCold • Last sync: {new Date().toLocaleTimeString()}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function TermsAndPricing() {
   const items = [
@@ -203,24 +398,30 @@ function TermsAndPricing() {
 }
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // Check if user is already authenticated in this session
+    const authenticated = sessionStorage.getItem('tlnAuthenticated');
+    if (authenticated === 'true') {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleAuthenticated = () => {
+    setIsAuthenticated(true);
+  };
+
+  // If not authenticated, show password protection
+  if (!isAuthenticated) {
+    return <PasswordProtection onAuthenticated={handleAuthenticated} />;
+  }
+
   return (
     <Router>
       <Routes>
-        <Route path="/tlnconsultinggroup" element={<TermsAndPricing />} />
-        <Route path="/" element={
-          <div className="min-h-screen bg-white flex items-center justify-center">
-            <div className="text-center">
-              <h1 className="text-2xl font-bold text-slate-900 mb-4">Welcome</h1>
-              <p className="text-slate-600 mb-4">This page is available at:</p>
-              <a 
-                href="/tlnconsultinggroup" 
-                className="text-blue-600 hover:text-blue-800 underline"
-              >
-                /tlnconsultinggroup
-              </a>
-            </div>
-          </div>
-        } />
+        <Route path="/finance" element={<TermsAndPricing />} />
+        <Route path="/" element={<ClientDashboard />} />
       </Routes>
     </Router>
   );
