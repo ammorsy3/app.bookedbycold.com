@@ -207,6 +207,20 @@ function App() {
     <Router>
       <Routes>
         <Route path="/tlnconsultinggroup" element={<TermsAndPricing />} />
+        <Route path="/" element={
+          <div className="min-h-screen bg-white flex items-center justify-center">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-slate-900 mb-4">Welcome</h1>
+              <p className="text-slate-600 mb-4">This page is available at:</p>
+              <a 
+                href="/tlnconsultinggroup" 
+                className="text-blue-600 hover:text-blue-800 underline"
+              >
+                /tlnconsultinggroup
+              </a>
+            </div>
+          </div>
+        } />
       </Routes>
     </Router>
   );
