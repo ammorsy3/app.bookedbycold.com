@@ -44,7 +44,7 @@ function ClientDashboard() {
       hoverColor: 'hover:bg-orange-600',
       link: 'https://app.instantly.ai/app/analytics/overview', // Will be configured later
       external: true,
-      stats: '73% open rate',
+      stats: '13.7K Emails Sent',
     },
   ];
 
