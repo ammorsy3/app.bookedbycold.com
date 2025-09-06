@@ -12,7 +12,7 @@ function ClientDashboard() {
       icon: Database,
       color: 'bg-blue-500',
       hoverColor: 'hover:bg-blue-600',
-      link: '#', // Will be replaced with actual Airtable link
+      link: 'https://airtable.com/appdepbMC8HjPr3D9/shrGOao87lyCG8yKN', // Will be replaced with actual Airtable link
       external: true,
       stats: '1,247 contacts',
     },
@@ -32,7 +32,7 @@ function ClientDashboard() {
       icon: Target,
       color: 'bg-purple-500',
       hoverColor: 'hover:bg-purple-600',
-      link: '#', // Will be configured later
+      link: 'https://airtable.com/appdepbMC8HjPr3D9/shrsGQTzFOxvpxxzn', // Will be configured later
       external: true,
       stats: '89 new leads',
     },
@@ -42,16 +42,16 @@ function ClientDashboard() {
       icon: BarChart3,
       color: 'bg-orange-500',
       hoverColor: 'hover:bg-orange-600',
-      link: '#', // Will be configured later
+      link: 'https://app.instantly.ai/app/analytics/overview', // Will be configured later
       external: true,
       stats: '73% open rate',
     },
   ];
 
   const quickStats = [
-    { label: 'Active Campaigns', value: '12', icon: Activity, color: 'text-blue-600' },
-    { label: 'Monthly Revenue', value: '$8,450', icon: TrendingUp, color: 'text-green-600' },
-    { label: 'Response Rate', value: '23%', icon: Target, color: 'text-purple-600' },
+    { label: 'Active Campaigns', value: '5', icon: Activity, color: 'text-blue-600' },
+    { label: 'Opportunities Value', value: '$58,500', icon: TrendingUp, color: 'text-green-600' },
+    { label: 'Response Rate', value: '1.45%', icon: Target, color: 'text-purple-600' },
     { label: 'Subscriptions', value: '7', icon: CreditCard, color: 'text-orange-600' },
   ];
 
