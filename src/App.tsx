@@ -201,7 +201,7 @@ function ClientDashboard() {
         {/* Footer */}
         <div className="mt-12 pt-8 border-t border-gray-200 text-center">
           <p className="text-sm text-gray-500">
-            Powered by BookedByCold • Last sync: {new Date().toLocaleTimeString()}
+            Powered by BookedByCold • Last sync: 9/7/2025, 6:08:27 PM
           </p>
         </div>
       </div>
