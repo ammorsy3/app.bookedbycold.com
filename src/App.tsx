@@ -186,6 +186,18 @@ function ClientDashboard() {
           </div>
         </div>
 
+        {/* Airtable Embed */}
+        <div className="mt-12">
+          <iframe
+            className="airtable-embed"
+            src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrGOao87lyCG8yKN"
+            frameBorder="0"
+            width="100%"
+            height="533"
+            style={{ background: 'transparent', border: '1px solid #ccc' }}
+          ></iframe>
+        </div>
+
         {/* Footer */}
         <div className="mt-12 pt-8 border-t border-gray-200 text-center">
           <p className="text-sm text-gray-500">
