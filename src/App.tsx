@@ -75,7 +75,7 @@ function ClientDashboard() {
             <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="text-sm text-gray-500">Last updated</p>
-                <p className="text-sm font-medium text-gray-900">{7 Septmber 6 PM}</p>
+                <p className="text-sm font-medium text-gray-900">9/7/2025, 6:08:27 PM</p>
               </div>
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                 <Users className="w-5 h-5 text-blue-600" />
