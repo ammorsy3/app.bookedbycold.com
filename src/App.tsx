@@ -53,6 +53,23 @@ function SiteFooter() {
     </footer>
   );
 }
+/* ---------- support button ---------- */
+function SupportButton() {
+  return (
+    <a
+      href="https://calendly.com/ahmorsy07/ai-booking-demo"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="fixed bottom-6 right-6 z-50 inline-flex items-center justify-center
+                 px-6 py-3 rounded-lg shadow-lg bg-orange-600 text-white
+                 hover:bg-orange-700 focus:outline-none focus:ring-4
+                 focus:ring-orange-300 transition-colors"
+    >
+      Need help? Book a call with Ahmed
+    </a>
+  );
+}
+
 
 
 /* ---------- layout shared by all tabs ---------- */
@@ -158,8 +175,8 @@ function DashboardLayout({ children }) {
                   <span className="text-sm font-semibold text-blue-600">T</span>
                 </div>
                 <div className="hidden md:block text-left">
-                  <p className="text-sm font-medium text-gray-900">Travis</p>
-                  <p className="text-xs text-gray-500">TLN Client</p>
+                  <p className="text-sm font-medium text-gray-900">Travis Lairson</p>
+                  <p className="text-xs text-gray-500">TLN Consulting Group</p>
                 </div>
                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -224,7 +241,7 @@ function DashboardLayout({ children }) {
       {/* route content */}
       {children}
             <SiteFooter />
-
+            <SupportButton />
     </div>
   );
 }
