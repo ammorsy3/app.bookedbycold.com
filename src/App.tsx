@@ -1,6 +1,7 @@
-
 /* App.jsx — FINAL VERSION */
 import React, { useState, useEffect, useRef } from 'react';
+import { AccountSettings, Support } from './ClientExtras';
+
 import {
   BrowserRouter as Router,
   Routes,
