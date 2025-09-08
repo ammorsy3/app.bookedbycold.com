@@ -28,6 +28,32 @@ import {
   Clock,
 } from 'lucide-react';
 import PasswordProtection from './components/PasswordProtection';
+/* ---------- site footer ---------- */
+function SiteFooter() {
+  return (
+    <footer className="py-8 mt-16 border-t border-gray-200 text-center text-sm leading-6 text-gray-500">
+      <p className="mb-2">
+        © {new Date().getFullYear()} <span className="font-medium text-gray-700">BookedByCold</span>.
+        All rights reserved.
+      </p>
+
+      <p className="mb-2">
+        This client portal contains confidential information. Please do not
+        share data or access outside your organization.
+      </p>
+
+      <a
+        href="https://bookedbycold.com"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-600 hover:text-blue-800 font-medium"
+      >
+        Visit public website →
+      </a>
+    </footer>
+  );
+}
+
 
 /* ---------- layout shared by all tabs ---------- */
 function DashboardLayout({ children }) {
@@ -197,9 +223,12 @@ function DashboardLayout({ children }) {
 
       {/* route content */}
       {children}
+            <SiteFooter />
+
     </div>
   );
 }
+
 
 /* ---------- Overview ---------- */
 function Overview() {
@@ -236,7 +265,6 @@ function Overview() {
       {/* placeholder card so you see something */}
       {/* dashboard cards grid — paste this where the placeholder div is */}
 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8" role="main">
-  
   {/* CRM */}
 <Link
   to="/crm"
@@ -342,7 +370,7 @@ function Overview() {
     </div>
   </div>
 </Link>
-
+  
 
 
   {/* Campaigns */}
@@ -370,6 +398,7 @@ function Overview() {
       </div>
     </div>
   </Link>
+
   {/* Reports */}
 <Link
   to="/reports"
@@ -404,7 +433,6 @@ function Overview() {
     </main>
   );
 }
-
 
 /* ---------- CRM ---------- */
 function CRM() {
@@ -459,7 +487,6 @@ function Campaigns() {
   className="w-full h-[750px] border border-gray-300 rounded-lg"
   allow="autoplay"
 />
-
 
     </main>
   );
