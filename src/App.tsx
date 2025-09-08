@@ -140,7 +140,8 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
             </p>
           </div>
           <div className="flex items-center gap-6">
-            
+                  <NovuInbox subscriberId="68be39f13c95e3a79082a7a9" />
+
             <div className="relative">
               <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg" aria-label="Profile menu">
                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center"><span className="text-sm font-semibold text-blue-600">T</span></div>
