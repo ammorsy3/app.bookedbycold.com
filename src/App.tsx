@@ -140,13 +140,7 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
             </p>
           </div>
           <div className="flex items-center gap-6">
-            <div className="relative">
-              <button onClick={() => setNotificationsOpen(!notificationsOpen)} className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg" aria-label="Notifications">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM10.97 4.97a.75.75 0 0 0-1.08 1.05l-3.99 4.99a.75.75 0 0 0 1.08 1.05l3.99-4.99a.75.75 0 0 0 0-1.1z" /></svg>
-                {unreadCount > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{unreadCount}</span>}
-              </button>
-              {notificationsOpen && <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50"><NovuInbox subscriberId="68be39f13c95e3a79082a7a9" /></div>}
-            </div>
+            
             <div className="relative">
               <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg" aria-label="Profile menu">
                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center"><span className="text-sm font-semibold text-blue-600">T</span></div>
