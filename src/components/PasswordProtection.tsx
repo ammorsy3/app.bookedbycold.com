@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff, Shield, Mail } from 'lucide-react';
 
-interface PasswordProtectionProps {
-  onAuthenticated: () => void;
-  clientName?: string;
-}
-
-export default function PasswordProtection({ onAuthenticated, clientName = 'Client' }: PasswordProtectionProps) {
+// The 'onAuthenticated' and 'clientName' props are no longer needed
+// as this component now handles redirection itself.
+export default function PasswordProtection() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -14,109 +13,81 @@ export default function PasswordProtection({ onAuthenticated, clientName = 'Clie
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Client-specific credentials
+  // All client credentials are in one place.
+  // In a real application, you would fetch this from a secure API.
   const clientCredentials = {
     'tlnconsultinggroup': {
       email: 'travis.lairson@tlnconsultinggroup.com',
       password: 'A7med&Travis@TLN',
-      displayName: 'TLN Consulting Group'
-    }
+    },
+    // You can add more clients here in the future
+    // 'newclient': {
+    //   email: 'contact@newclient.com',
+    //   password: 'securepassword123',
+    // }
   };
-
-  // Get current client from URL path
-  const getCurrentClient = () => {
-    const path = window.location.pathname;
-    const pathParts = path.split('/').filter(part => part);
-    return pathParts[0] || null;
-  };
-
-  const currentClient = getCurrentClient();
-  const credentials = currentClient ? clientCredentials[currentClient] : null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    // Simulate a brief loading state for better UX
+    // Simulate an API call
     setTimeout(() => {
-      if (!credentials) {
-        setError('Invalid client access. Please check your URL.');
-        setIsLoading(false);
-        return;
-      }
+      // Find which client's credentials match the input
+      const clientKey = Object.keys(clientCredentials).find(key => {
+        const creds = clientCredentials[key as keyof typeof clientCredentials];
+        return creds.email === email && creds.password === password;
+      });
 
-      if (email === credentials.email && password === credentials.password) {
-        const storageKey = `${currentClient}Authenticated`;
-        const expiryKey = `${currentClient}AuthExpiry`;
+      if (clientKey) {
+        // If a match is found, set authentication state
+        const storageKey = `${clientKey}Authenticated`;
+        const expiryKey = `${clientKey}AuthExpiry`;
 
         if (rememberMe) {
           // Store authentication in localStorage with 96-hour expiry
-          const expiryTime = Date.now() + (96 * 60 * 60 * 1000); // 96 hours in milliseconds
+          const expiryTime = Date.now() + (96 * 60 * 60 * 1000); // 96 hours
           localStorage.setItem(storageKey, 'true');
           localStorage.setItem(expiryKey, expiryTime.toString());
         } else {
-          // Store authentication in sessionStorage (expires when browser closes)
+          // Store authentication in sessionStorage (clears on browser close)
           sessionStorage.setItem(storageKey, 'true');
         }
-        onAuthenticated();
+        
+        // Redirect to the client's specific dashboard URL
+        navigate(`/${clientKey}`);
+
       } else {
+        // If no match is found, show an error
         setError('Incorrect email or password. Please try again.');
         setPassword('');
       }
+
       setIsLoading(false);
     }, 500);
   };
 
-  // If no client is specified in URL, show generic access page
-  if (!currentClient || !credentials) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center px-6">
-        <div className="max-w-md w-full text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
-            <Shield className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-4">BookedByCold</h1>
-          <p className="text-blue-200 mb-8">Client Dashboard Platform</p>
-          
-          <div className="bg-white rounded-xl shadow-2xl p-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Access Your Dashboard</h2>
-            <p className="text-gray-600 mb-6">
-              Please use your specific client URL to access your dashboard:
-            </p>
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <code className="text-sm text-gray-700">
-                app.bookedbycold.com/project-name/
-              </code>
-            </div>
-            <p className="text-sm text-gray-500">
-              Contact support if you need assistance accessing your dashboard.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // This component now always renders the unified login form.
+  // The generic "Access Your Dashboard" page has been removed.
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center px-6">
       <div className="max-w-md w-full">
-        {/* Logo/Header */}
+        {/* Generic Header for the main login page */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
             <Shield className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">{credentials.displayName}</h1>
-          <p className="text-blue-200">Client Dashboard Access</p>
+          <h1 className="text-3xl font-bold text-white mb-2">BookedByCold</h1>
+          <p className="text-blue-200">Client Dashboard Platform</p>
         </div>
 
-        {/* Login Form */}
+        {/* Unified Login Form */}
         <div className="bg-white rounded-xl shadow-2xl p-8">
           <div className="flex items-center gap-3 mb-6">
             <Lock className="w-5 h-5 text-gray-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Secure Access Required</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Client Login</h2>
           </div>
-
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Field */}
             <div>
