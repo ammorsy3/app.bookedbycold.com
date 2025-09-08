@@ -83,7 +83,7 @@ function NovuInbox({ subscriberId }: { subscriberId: string }) {
 
     const novu = new NovuUI({
       options: {
-        applicationIdentifier: 'in-app-step',
+        applicationIdentifier: 'ELbdxoPyEZwC',
         // CORRECT: Use the subscriberId prop passed to the component
         subscriber: '68be39f13c95e3a79082a7a9',
       },
