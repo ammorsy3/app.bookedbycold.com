@@ -1,5 +1,6 @@
 /* App.jsx — 08 Sep 2025 */
 
+import { NovuUI } from '@novu/js/ui';
 import React, { useState, useEffect } from 'react';
 import {
   BrowserRouter as Router,
@@ -65,11 +66,37 @@ function SupportButton() {
                  hover:bg-orange-700 focus:outline-none focus:ring-4
                  focus:ring-orange-300 transition-colors"
     >
-      Need help? Book a call with Ahmed
+      Need help? Book a call with Ahmed.
     </a>
   );
 }
+/* ---------- Novu inbox wrapper ---------- */
+function NovuInbox({ subscriberId }: { subscriberId: string }) {
+  const inboxRef = React.useRef<HTMLDivElement>(null);
 
+  React.useEffect(() => {
+    if (!inboxRef.current) return;
+
+    const novu = new NovuUI({
+      /* 🔁 swap with your real IDs ↓ */
+      options: {
+        applicationIdentifier: 'new-lead-tln-consulting',
+        subscriber: '68be39f13c95e3a79082a7a9',
+      },
+    });
+
+    novu.mountComponent({
+      name: 'Inbox',
+      element: inboxRef.current,
+    });
+
+    // optional cleanup when component unmounts
+    return () => novu?.unmountComponent?.();
+  }, [subscriberId]);
+
+  // Novu renders inside this div
+  return <div id="notification-inbox" ref={inboxRef} />;
+}
 
 
 /* ---------- layout shared by all tabs ---------- */
@@ -146,20 +173,8 @@ function DashboardLayout({ children }) {
                 )}
               </button>
               {notificationsOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                  <div className="p-4 font-semibold border-b border-gray-200">Notifications</div>
-                  <div className="max-h-64 overflow-y-auto">
-                    {notifications.map((n) => (
-                      <div
-                        key={n.id}
-                        className={`p-4 border-b border-gray-100 hover:bg-gray-50 ${n.unread ? 'bg-blue-50' : ''}`}
-                      >
-                        <p className="text-sm text-gray-900">{n.message}</p>
-                        <p className="text-xs text-gray-500 mt-1">{n.time}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <button className="w-full py-2 text-sm text-blue-600 hover:bg-blue-50">Mark all as read</button>
+                <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <NovuInbox subscriberId="6Bbe39f13C95e3a79082a7a9" />
                 </div>
               )}
             </div>
@@ -189,9 +204,14 @@ function DashboardLayout({ children }) {
                   <hr className="my-2" />
                   <button
                     onClick={() => {
-                      sessionStorage.removeItem('tlnAuthenticated');
-                      localStorage.removeItem('tlnAuthenticated');
-                      localStorage.removeItem('tlnAuthExpiry');
+                      const currentClient = window.location.pathname.split('/').filter(part => part)[0];
+                      if (currentClient) {
+                        const storageKey = `${currentClient}Authenticated`;
+                        const expiryKey = `${currentClient}AuthExpiry`;
+                        sessionStorage.removeItem(storageKey);
+                        localStorage.removeItem(storageKey);
+                        localStorage.removeItem(expiryKey);
+                      }
                       navigate(0);
                     }}
                     className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50"
@@ -522,7 +542,7 @@ function Reports() {
       <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-10">
         <h2 className="text-xl font-bold text-gray-900 mb-4">Latest Campaign Report</h2>
         <p className="text-gray-600 mb-6">
-          Download the detailed PDF for this month’s campaigns.
+          Download the detailed PDF for this month's campaigns.
         </p>
         <a
           href="https://drive.google.com/uc?export=download&id=1Lzrn97Q0fgLgFUoYPnwhLLvSVSDDDqaG"
@@ -688,7 +708,7 @@ function Finance() {
       {/* reminder */}
       <section className="max-w-4xl mx-auto mt-8 flex items-start gap-2 text-sm text-slate-600">
         <Info className="w-4 h-4 mt-0.5 text-blue-600" />
-        <p>Please settle Sales Navigator promptly; Email Accounts isn’t due until 15 Sep.</p>
+        <p>Please settle Sales Navigator promptly; Email Accounts isn't due until 15 Sep.</p>
       </section>
 
       <footer className="max-w-4xl mx-auto mt-12 pt-8 border-t border-slate-200 text-center">
@@ -721,18 +741,34 @@ function AppRoutes() {
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // Get current client from URL path
+  const getCurrentClient = () => {
+    const path = window.location.pathname;
+    const pathParts = path.split('/').filter(part => part);
+    return pathParts[0] || null;
+  };
+
   useEffect(() => {
-    const sessionAuth = sessionStorage.getItem('tlnAuthenticated');
-    const localAuth   = localStorage.getItem('tlnAuthenticated');
-    const authExpiry  = localStorage.getItem('tlnAuthExpiry');
+    const currentClient = getCurrentClient();
+    if (!currentClient) {
+      setIsAuthenticated(false);
+      return;
+    }
+
+    const storageKey = `${currentClient}Authenticated`;
+    const expiryKey = `${currentClient}AuthExpiry`;
+    
+    const sessionAuth = sessionStorage.getItem(storageKey);
+    const localAuth   = localStorage.getItem(storageKey);
+    const authExpiry  = localStorage.getItem(expiryKey);
 
     if (sessionAuth === 'true') {
       setIsAuthenticated(true);
     } else if (localAuth === 'true' && authExpiry && Date.now() < Number(authExpiry)) {
       setIsAuthenticated(true);
     } else {
-      localStorage.removeItem('tlnAuthenticated');
-      localStorage.removeItem('tlnAuthExpiry');
+      localStorage.removeItem(storageKey);
+      localStorage.removeItem(expiryKey);
     }
   }, []);
 
