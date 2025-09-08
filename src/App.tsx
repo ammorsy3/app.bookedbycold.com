@@ -74,30 +74,34 @@ function SupportButton() {
 }
 
 /* ---------- Novu Inbox Wrapper ---------- */
-import { Novu } from '@novu/api'; 
-const novu = new Novu({ 
-  secretKey: process.env['c6634053d2a41eeb08f7ff5ae6319243']
-});
+function NovuInbox({ subscriberId }: { subscriberId: string }) {
+  const inboxRef = useRef<HTMLDivElement>(null);
 
-// The ID of the subscriber you want to notify.
-// In a real app, you would get this from your database.
-const subscriberIdForTln = '68be39f13c95e3a79082a7a9';
+  useEffect(() => {
+    // Return early if the ref isn't attached or if there's no subscriberId
+    if (!inboxRef.current || !subscriberId) return;
 
-// Trigger the notification for that specific subscriber
-novu.trigger({
-  workflowId: 'new-lead-tln-consulting',
-  to: {
-    subscriberId: '68be39f13c95e3a79082a7a9', // <-- CORRECT: Specify the recipient
-    // You can also pass other details if needed
-    // email: "travis.lairson@tlnconsultinggroup.com" 
-  },
-  payload: {
-    // Example: Add any dynamic data your notification template needs
-    leadSource: "LinkedIn Campaign",
-    companyName: "Acme Corp"
-  }
-});
+    const novu = new NovuUI({
+      options: {
+        applicationIdentifier: 'new-lead-tln-consulting',
+        // CORRECT: Use the subscriberId prop passed to the component
+        subscriber: subscriberId,
+      },
+    });
 
+    novu.mountComponent({
+      name: 'Inbox',
+      element: inboxRef.current,
+    });
+
+    // Cleanup when the component unmounts or the subscriberId changes
+    return () => novu?.unmountComponent?.();
+
+  // Add subscriberId to the dependency array to re-initialize if it changes
+  }, [subscriberId]); 
+
+  return <div id="notification-inbox" ref={inboxRef} />;
+}
 
 /* ---------- Dashboard Layout ---------- */
 function DashboardLayout({ clientKey }: { clientKey: string }) {
