@@ -8,6 +8,7 @@ interface PasswordProtectionProps {
 export default function PasswordProtection({ onAuthenticated }: PasswordProtectionProps) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -21,8 +22,15 @@ export default function PasswordProtection({ onAuthenticated }: PasswordProtecti
     // Simulate a brief loading state for better UX
     setTimeout(() => {
       if (password === correctPassword) {
-        // Store authentication in sessionStorage (expires when browser closes)
-        sessionStorage.setItem('tlnAuthenticated', 'true');
+        if (rememberMe) {
+          // Store authentication in localStorage with 96-hour expiry
+          const expiryTime = Date.now() + (96 * 60 * 60 * 1000); // 96 hours in milliseconds
+          localStorage.setItem('tlnAuthenticated', 'true');
+          localStorage.setItem('tlnAuthExpiry', expiryTime.toString());
+        } else {
+          // Store authentication in sessionStorage (expires when browser closes)
+          sessionStorage.setItem('tlnAuthenticated', 'true');
+        }
         onAuthenticated();
       } else {
         setError('Incorrect password. Please try again.');
@@ -78,6 +86,19 @@ export default function PasswordProtection({ onAuthenticated }: PasswordProtecti
               </div>
             </div>
 
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                disabled={isLoading}
+              />
+              <label htmlFor="rememberMe" className="ml-2 text-sm text-gray-700">
+                Remember me for 4 days
+              </label>
+            </div>
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                 <p className="text-sm text-red-600">{error}</p>
