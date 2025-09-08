@@ -1,442 +1,704 @@
-import React from 'react';
-import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { FileText, DollarSign, Calendar, Zap, Info, Database, Users, TrendingUp, BarChart3, Settings, ExternalLink, Activity, Target, CreditCard, Clock } from 'lucide-react';
+/* App.jsx — 08 Sep 2025 */
+
+import React, { useState, useEffect } from 'react';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  Link,
+  useNavigate,
+  useLocation,
+} from 'react-router-dom';
+import {
+  FileText,
+  DollarSign,
+  Calendar,
+  Zap,
+  Info,
+  Database,
+  Users,
+  TrendingUp,
+  BarChart3,
+  Settings,
+  ExternalLink,
+  Activity,
+  Target,
+  CreditCard,
+  Clock,
+} from 'lucide-react';
 import PasswordProtection from './components/PasswordProtection';
 
-function ClientDashboard() {
-  const dashboardCards = [
-    {
-      title: 'CRM Dashboard',
-      description: 'Access your complete customer relationship management system',
-      icon: Database,
-      color: 'bg-blue-500',
-      hoverColor: 'hover:bg-blue-600',
-      link: 'https://airtable.com/appdepbMC8HjPr3D9/shrGOao87lyCG8yKN', // Will be replaced with actual Airtable link
-      external: true,
-      stats: '1,247 contacts',
-    },
-    {
-      title: 'Financial Overview',
-      description: 'Monthly subscriptions, terms, and pricing details',
-      icon: DollarSign,
-      color: 'bg-green-500',
-      hoverColor: 'hover:bg-green-600',
-      link: '/finance',
-      external: false,
-      stats: '$116.00 due today',
-    },
-    {
-      title: 'Leads Dashboard',
-      description: 'Track and manage your lead generation pipeline',
-      icon: Target,
-      color: 'bg-purple-500',
-      hoverColor: 'hover:bg-purple-600',
-      link: 'https://airtable.com/appdepbMC8HjPr3D9/shrsGQTzFOxvpxxzn', // Will be configured later
-      external: true,
-      stats: '89 new leads',
-    },
-    {
-      title: 'Campaign Analytics',
-      description: 'Monitor email campaigns and outreach performance',
-      icon: BarChart3,
-      color: 'bg-orange-500',
-      hoverColor: 'hover:bg-orange-600',
-      link: 'https://app.instantly.ai/app/analytics/overview', // Will be configured later
-      external: true,
-      stats: '13.7K Emails Sent',
-    },
+/* ---------- layout shared by all tabs ---------- */
+function DashboardLayout({ children }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+
+  const navigationTabs = [
+    { id: 'overview',  label: 'Overview',  icon: BarChart3, to: '/overview' },
+    { id: 'crm',       label: 'CRM',       icon: Database,  to: '/crm' },
+    { id: 'leads',     label: 'Leads',     icon: Target,    to: '/leads' },
+    { id: 'campaigns', label: 'Campaigns', icon: Activity,  to: '/campaigns' },
+    { id: 'finance',   label: 'Finance',   icon: DollarSign,to: '/finance' },
+    { id: 'reports', label: 'Reports', icon: FileText, to: '/reports' },
   ];
 
-  const quickStats = [
-    { label: 'Active Campaigns', value: '5', icon: Activity, color: 'text-blue-600' },
-    { label: 'Opportunities Value', value: '$58,500', icon: TrendingUp, color: 'text-green-600' },
-    { label: 'Response Rate', value: '1.45%', icon: Target, color: 'text-purple-600' },
-    { label: 'Subscriptions', value: '7', icon: CreditCard, color: 'text-orange-600' },
+  const notifications = [
+    { id: 1, message: 'New lead from LinkedIn campaign', time: '5 min ago', unread: true },
+    { id: 2, message: 'Email campaign completed',        time: '1 h ago',   unread: true },
+    { id: 3, message: 'Payment processed successfully',  time: '2 h ago',   unread: false },
   ];
-
-  const recentActivity = [
-    { action: 'New lead generated', time: '2 minutes ago', type: 'lead' },
-    { action: 'Email campaign sent', time: '1 hour ago', type: 'campaign' },
-    { action: 'Payment processed', time: '3 hours ago', type: 'payment' },
-    { action: 'CRM updated', time: '5 hours ago', type: 'crm' },
-  ];
+  const unreadCount = notifications.filter((n) => n.unread).length;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">TLN Consulting Group</h1>
-              <p className="text-lg text-gray-600 mt-1">Client Dashboard</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm text-gray-500">Last updated</p>
-                <p className="text-sm font-medium text-gray-900">9/7/2025, 6:08:27 PM</p>
-              </div>
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <Users className="w-5 h-5 text-blue-600" />
-              </div>
-            </div>
+      {/* ---------- header ---------- */}
+      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">TLN Consulting Group</h1>
+            <p className="text-lg text-gray-600 mt-1">
+              <span className="inline-flex items-center gap-2">
+                Welcome Travis 👋
+                <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">Online</span>
+              </span>
+            </p>
           </div>
-        </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {quickStats.map((stat) => (
-            <div key={stat.label} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
-                </div>
-                <stat.icon className={`w-8 h-8 ${stat.color}`} />
+          {/* header right-side controls */}
+          <div className="flex items-center gap-6">
+            {/* search */}
+            <div className="relative hidden md:block">
+              <input
+                type="text"
+                placeholder="Search dashboard…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
               </div>
             </div>
-          ))}
-        </div>
 
-        {/* Main Dashboard Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {dashboardCards.map((card) => (
-            <div key={card.title} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200">
-              <div className="p-8">
-                <div className="flex items-start justify-between mb-6">
-                  <div className={`w-12 h-12 ${card.color} rounded-lg flex items-center justify-center`}>
-                    <card.icon className="w-6 h-6 text-white" />
+            {/* notifications */}
+            <div className="relative">
+              <button
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+                aria-label="Notifications"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM10.97 4.97a.75.75 0 0 0-1.08 1.05l-3.99 4.99a.75.75 0 0 0 1.08 1.05l3.99-4.99a.75.75 0 0 0 0-1.1z" />
+                </svg>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+              {notificationsOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <div className="p-4 font-semibold border-b border-gray-200">Notifications</div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        className={`p-4 border-b border-gray-100 hover:bg-gray-50 ${n.unread ? 'bg-blue-50' : ''}`}
+                      >
+                        <p className="text-sm text-gray-900">{n.message}</p>
+                        <p className="text-xs text-gray-500 mt-1">{n.time}</p>
+                      </div>
+                    ))}
                   </div>
-                  {card.external && (
-                    <ExternalLink className="w-5 h-5 text-gray-400" />
-                  )}
+                  <button className="w-full py-2 text-sm text-blue-600 hover:bg-blue-50">Mark all as read</button>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{card.title}</h3>
-                <p className="text-gray-600 mb-4">{card.description}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-500">{card.stats}</span>
-                  <a
-                    href={card.link}
-                    className={`inline-flex items-center gap-2 px-4 py-2 ${card.color} ${card.hoverColor} text-white rounded-lg font-medium transition-colors duration-200`}
-                    {...(card.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+              )}
+            </div>
+
+            {/* profile */}
+            <div className="relative">
+              <button
+                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg"
+                aria-label="Profile menu"
+              >
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-sm font-semibold text-blue-600">T</span>
+                </div>
+                <div className="hidden md:block text-left">
+                  <p className="text-sm font-medium text-gray-900">Travis</p>
+                  <p className="text-xs text-gray-500">TLN Client</p>
+                </div>
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {profileMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Account Settings</button>
+                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Support</button>
+                  <hr className="my-2" />
+                  <button
+                    onClick={() => {
+                      sessionStorage.removeItem('tlnAuthenticated');
+                      localStorage.removeItem('tlnAuthenticated');
+                      localStorage.removeItem('tlnAuthExpiry');
+                      navigate(0);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                   >
-                    Access
-                    {card.external ? <ExternalLink className="w-4 h-4" /> : <span>→</span>}
-                  </a>
+                    Sign Out
+                  </button>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Recent Activity & Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Recent Activity */}
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <Clock className="w-5 h-5 text-gray-600" />
-              <h3 className="text-lg font-bold text-gray-900">Recent Activity</h3>
-            </div>
-            <div className="space-y-4">
-              {recentActivity.map((activity, index) => (
-                <div key={index} className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 transition-colors duration-150">
-                  <div className={`w-2 h-2 rounded-full ${
-                    activity.type === 'lead' ? 'bg-purple-500' :
-                    activity.type === 'campaign' ? 'bg-blue-500' :
-                    activity.type === 'payment' ? 'bg-green-500' : 'bg-orange-500'
-                  }`} />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                    <p className="text-xs text-gray-500">{activity.time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <Zap className="w-5 h-5 text-gray-600" />
-              <h3 className="text-lg font-bold text-gray-900">Quick Actions</h3>
-            </div>
-            <div className="space-y-3">
-              <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors duration-150">
-                <div className="flex items-center gap-3">
-                  <Users className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-gray-900">Add New Contact</span>
-                </div>
-              </button>
-              <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-colors duration-150">
-                <div className="flex items-center gap-3">
-                  <TrendingUp className="w-4 h-4 text-green-600" />
-                  <span className="text-sm font-medium text-gray-900">View Reports</span>
-                </div>
-              </button>
-              <button className="w-full text-left p-3 rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-colors duration-150">
-                <div className="flex items-center gap-3">
-                  <Settings className="w-4 h-4 text-purple-600" />
-                  <span className="text-sm font-medium text-gray-900">Settings</span>
-                </div>
-              </button>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Airtable Embed */}
-        <div className="mt-12">
-          <iframe
-            className="airtable-embed"
-            src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrGOao87lyCG8yKN"
-            frameBorder="0"
-            width="100%"
-            height="533"
-            style={{ background: 'transparent', border: '1px solid #ccc' }}
-          ></iframe>
-        </div>
+        {/* tab bar */}
+        <nav className="max-w-7xl mx-auto px-6">
+          <div className="flex space-x-8 border-b border-gray-200">
+            {navigationTabs.map((tab) => (
+              <Link
+                key={tab.id}
+                to={tab.to}
+                className={`flex items-center gap-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors
+                  ${
+                    location.pathname === tab.to ||
+                    (tab.id === 'overview' && location.pathname === '/')
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+              </Link>
+            ))}
+          </div>
+        </nav>
+      </header>
 
-        {/* Footer */}
-        <div className="mt-12 pt-8 border-t border-gray-200 text-center">
-          <p className="text-sm text-gray-500">
-            Powered by BookedByCold • Last sync: 9/7/2025, 6:08:27 PM
-          </p>
-        </div>
-      </div>
+      {/* overlay click-outside */}
+      {(notificationsOpen || profileMenuOpen) && (
+        <div
+          className="fixed inset-0 z-30"
+          onMouseDown={() => {
+            setNotificationsOpen(false);
+            setProfileMenuOpen(false);
+          }}
+        />
+      )}
+
+      {/* route content */}
+      {children}
     </div>
   );
 }
 
-function TermsAndPricing() {
-  const items = [
-    {
-      name: 'Make',
-      desc: 'Platforms & AI integration',
-      price: 36.38,
-    },
-    {
-      name: 'Anthropic',
-      desc: 'LLM used for email writing',
-      price: 40.0,
-    },
-    {
-      name: 'Perplexity',
-      desc: 'LLM used for lead research & personalisation',
-      price: 40.0,
-    },
-    {
-      name: 'Sales Navigator',
-      desc: 'Lead generation',
-      price: 199.0,
-      reminder: 'Reminder: renews this month. Last date to keep Premium access is 29 September.',
-      highlightYellow: true, // Added flag to highlight yellow
-    },
-    {
-      name: 'Instantly.ai',
-      desc: 'Cold emailing platform - hyper-growth plan',
-      price: 97.0,
-      alreadyPaid: true,
-      strikeThrough: true,
-    },
-    {
-      name: 'Anymail finder',
-      desc: 'Lead enrichment service',
-      price: 199.0,
-      alreadyPaid: true,
-      strikeThrough: true,
-    },
-    {
-      name: 'Email Accounts',
-      desc: 'Needed for ≈1500 emails a day',
-      price: 240.0,
-      notDueYet: true,
-      due: 'Payment due: September 15th only',
-      dueSmall: 'This payment can wait until the specified date',
-    },
+/* ---------- Overview ---------- */
+function Overview() {
+  const stats = [
+    { label: 'Active Campaigns', value: '5', icon: Activity, color: 'text-blue-600' },
+    { label: 'Monthly Revenue', value: '$58,500', icon: TrendingUp, color: 'text-green-600' },
+    { label: 'Response Rate', value: '1.45%', icon: Target, color: 'text-purple-600' },
+    { label: 'Subscriptions', value: '7', icon: CreditCard, color: 'text-orange-600' },
   ];
 
-  const fullTotal = items.reduce((sum, item) => sum + (item.price || 0), 0);
+  return (
+    <main className="max-w-7xl mx-auto px-6 py-8">
+      {/* breadcrumb */}
+      <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
+        <span>Dashboard</span><span>/</span>
+        <span className="text-gray-900 font-medium capitalize">overview</span>
+      </nav>
+
+      {/* quick-stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {stats.map((s) => (
+          <div key={s.label} className="bg-white rounded-lg shadow-sm border p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">{s.label}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{s.value}</p>
+              </div>
+              <s.icon className={`w-8 h-8 ${s.color}`} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* placeholder card so you see something */}
+      {/* dashboard cards grid — paste this where the placeholder div is */}
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8" role="main">
+  
+  {/* CRM */}
+<Link
+  to="/crm"
+  className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all group"
+>
+  <div className="p-8">
+    <div className="flex items-start justify-between mb-6">
+      <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+        <Database className="w-6 h-6 text-white" />
+      </div>
+
+      {/* stays visible; color shifts on hover */}
+      <ExternalLink className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+    </div>
+
+    <h3 className="text-xl font-bold text-gray-900 mb-2">CRM Dashboard</h3>
+    <p className="text-gray-600 mb-4">
+      Access your complete customer relationship management system
+    </p>
+
+    <div className="flex items-center justify-between">
+      <span className="text-sm font-medium text-gray-500 group-hover:text-gray-700">
+        1,247 contacts
+      </span>
+
+      {/* opens Airtable; stops the parent <Link> navigation */}
+      <a
+        href="https://airtable.com/appdepbMC8HjPr3D9/shrGOao87lyCG8yKN"
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg font-medium group-hover:shadow-md transition-colors"
+      >
+        Access <ExternalLink className="w-4 h-4" />
+      </a>
+    </div>
+  </div>
+</Link>
+
+  {/* Finance */}
+  <Link
+    to="/finance"
+    className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all group"
+  >
+    <div className="p-8">
+      <div className="flex items-start justify-between mb-6">
+        <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+          <DollarSign className="w-6 h-6 text-white" />
+        </div>
+      </div>
+      <h3 className="text-xl font-bold text-gray-900 mb-2">Financial Overview</h3>
+      <p className="text-gray-600 mb-4">
+        Monthly subscriptions, terms, and pricing details
+      </p>
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-gray-500 group-hover:text-gray-700">
+          $116.00 due today
+        </span>
+        <span className="inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg font-medium group-hover:shadow-md">
+          Access →
+        </span>
+      </div>
+    </div>
+  </Link>
+
+  {/* Leads */}
+<Link
+  to="/leads"
+  className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all group"
+>
+  <div className="p-8">
+    {/* top row: icon + small external-tab glyph */}
+    <div className="flex items-start justify-between mb-6">
+      <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+        <Target className="w-6 h-6 text-white" />
+      </div>
+      {/* this glyph stays visible; color changes on hover like CRM card */}
+      <ExternalLink className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+    </div>
+
+    {/* title + blurb */}
+    <h3 className="text-xl font-bold text-gray-900 mb-2">Leads Dashboard</h3>
+    <p className="text-gray-600 mb-4">
+      Track and manage your lead-generation pipeline
+    </p>
+
+    {/* stats + dedicated Access button */}
+    <div className="flex items-center justify-between">
+      <span className="text-sm font-medium text-gray-500 group-hover:text-gray-700">
+        89 new leads
+      </span>
+
+      {/* stop event propagation so only this button opens Airtable */}
+      <a
+        href="https://airtable.com/invite/l?inviteId=invG6X8ERSPZ5Zpc6&inviteToken=e435074069a4e302858da4b37a8e6137c9ff8825aba261372dd4def71bf29808&utm_medium=email&utm_source=product_team&utm_content=transactional-alerts"
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg font-medium group-hover:shadow-md transition-colors"
+      >
+        Edit Access <ExternalLink className="w-4 h-4" />
+      </a>
+    </div>
+  </div>
+</Link>
+
+
+
+  {/* Campaigns */}
+  <Link
+    to="/campaigns"
+    className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all group"
+  >
+    <div className="p-8">
+      <div className="flex items-start justify-between mb-6">
+        <div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+          <BarChart3 className="w-6 h-6 text-white" />
+        </div>
+      </div>
+      <h3 className="text-xl font-bold text-gray-900 mb-2">Campaign Analytics</h3>
+      <p className="text-gray-600 mb-4">
+        Monitor email campaigns and outreach performance
+      </p>
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-gray-500 group-hover:text-gray-700">
+          13.7K Emails Sent
+        </span>
+        <span className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg font-medium group-hover:shadow-md">
+          Access →
+        </span>
+      </div>
+    </div>
+  </Link>
+  {/* Reports */}
+<Link
+  to="/reports"
+  className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all group"
+>
+  <div className="p-8">
+    <div className="flex items-start justify-between mb-6">
+      <div className="w-12 h-12 bg-indigo-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+        <FileText className="w-6 h-6 text-white" />
+      </div>
+      <ExternalLink className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+    </div>
+
+    <h3 className="text-xl font-bold text-gray-900 mb-2">Monthly Reports</h3>
+    <p className="text-gray-600 mb-4">
+      View and download detailed campaign PDFs
+    </p>
+
+    <div className="flex items-center justify-between">
+      <span className="text-sm font-medium text-gray-500 group-hover:text-gray-700">
+        Latest file: Aug 2025
+      </span>
+      <span className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium group-hover:shadow-md">
+        Open →
+      </span>
+    </div>
+  </div>
+</Link>
+
+</div>
+
+    </main>
+  );
+}
+
+
+/* ---------- CRM ---------- */
+function CRM() {
+  return (
+    <main className="max-w-7xl mx-auto px-6 py-8">
+      <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
+        <span>Dashboard</span><span>/</span>
+        <span className="text-gray-900 font-medium capitalize">crm</span>
+      </nav>
+
+      <iframe
+        className="airtable-embed h-[750px] w-full border border-gray-300"
+        title="CRM Airtable"
+        src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrGOao87lyCG8yKN"
+        frameBorder="0"
+      />
+    </main>
+  );
+}
+
+/* ---------- Leads ---------- */
+function Leads() {
+  return (
+    <main className="max-w-7xl mx-auto px-6 py-8">
+      <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
+        <span>Dashboard</span><span>/</span>
+        <span className="text-gray-900 font-medium capitalize">leads</span>
+      </nav>
+
+      <iframe
+        className="airtable-embed h-[750px] w-full border border-gray-300"
+        title="Leads Airtable"
+        src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrvaMOVVXFChOUOo?viewControls=on"
+        frameBorder="0"
+      />
+    </main>
+  );
+}
+
+/* ---------- Campaigns ---------- */
+function Campaigns() {
+  return (
+    <main className="max-w-7xl mx-auto px-6 py-8">
+      <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
+        <span>Dashboard</span><span>/</span>
+        <span className="text-gray-900 font-medium capitalize">campaigns</span>
+      </nav>
+
+      <iframe
+  title="Monthly campaign snapshot"
+  src="https://drive.google.com/file/d/1lbrZudT6pkugTEDPPGG5euqtaqYIjlhh/preview"
+  className="w-full h-[750px] border border-gray-300 rounded-lg"
+  allow="autoplay"
+/>
+
+
+    </main>
+  );
+}
+/* ---------- Reports ---------- */
+function Reports() {
+  return (
+    <main className="max-w-7xl mx-auto px-6 py-8">
+      {/* breadcrumb */}
+      <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
+        <span>Dashboard</span><span>/</span>
+        <span className="text-gray-900 font-medium capitalize">reports</span>
+      </nav>
+
+      {/* monthly report download */}
+      <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-10">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Latest Campaign Report</h2>
+        <p className="text-gray-600 mb-6">
+          Download the detailed PDF for this month’s campaigns.
+        </p>
+        <a
+          href="https://drive.google.com/uc?export=download&id=1Lzrn97Q0fgLgFUoYPnwhLLvSVSDDDqaG"
+          className="inline-flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Download PDF
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
+          </svg>
+        </a>
+      </section>
+
+      {/* loom video */}
+      <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Walk-through Video</h2>
+        <div style={{ position: 'relative', paddingBottom: '62.5%', height: 0 }}>
+          <iframe
+            src="https://www.loom.com/embed/b07ab1ca4d1040d0ae4941025b9286bc?sid=e7fa61ac-ed93-4745-b71f-7cf06856426d"
+            frameBorder="0"
+            allowFullScreen
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+            title="Campaign report walkthrough"
+          />
+        </div>
+      </section>
+    </main>
+  );
+}
+
+
+/* ---------- Finance (Terms & Pricing inline) ---------- */
+function Finance() {
+  const items = [
+    { name: 'Make',          desc: 'Platforms & AI integration',                       price: 36.38 },
+    { name: 'Anthropic',     desc: 'LLM for email writing',                            price: 40.0 },
+    { name: 'Perplexity',    desc: 'LLM for lead research & personalization',          price: 40.0 },
+    { name: 'Sales Navigator',desc: 'Lead generation', price: 119.0, reminder: 'Renews 29 Sep', highlightYellow: true },
+    { name: 'Instantly.ai',  desc: 'Cold emailing — hyper-growth plan',                price: 97.0, alreadyPaid: true, strikeThrough: true },
+    { name: 'Anymail Finder',desc: 'Lead enrichment',                                  price: 199.0, alreadyPaid: true, strikeThrough: true },
+    { name: 'Email Accounts',desc: '≈1,500 emails/day',                                price: 240.0, notDueYet: true, due: 'Due 15 Sep', dueSmall: 'Payment can wait' },
+  ];
+  const fullTotal     = items.reduce((s, i) => s + i.price, 0);
   const totalDueToday = 116.0;
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <div className="bg-slate-50 border-b border-slate-200">
+    <main className="max-w-7xl mx-auto px-6 py-8">
+      <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
+        <span>Dashboard</span><span>/</span>
+        <span className="text-gray-900 font-medium capitalize">finance</span>
+      </nav>
+
+      {/* header */}
+      <div className="bg-slate-50 border-b border-slate-200 mb-8">
         <div className="max-w-4xl mx-auto px-6 py-8">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Terms & Pricing</h1>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-lg text-slate-600">From: <span className="font-semibold text-slate-900">BookedByCold</span></p>
-              <p className="text-lg text-slate-600">To: <span className="font-semibold text-slate-900">TLN Consulting Group</span></p>
+              <p className="text-lg text-slate-600">To:&nbsp;&nbsp;&nbsp;<span className="font-semibold text-slate-900">TLN Consulting Group</span></p>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-slate-500">Date: {new Date().toLocaleDateString()}</p>
-            </div>
+            <p className="text-sm text-slate-500">Date: {new Date().toLocaleDateString()}</p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        {/* Pricing Terms Section */}
-        <div className="mb-12">
-          <div className="flex items-center gap-3 mb-6">
-            <DollarSign className="w-6 h-6 text-blue-600" />
-            <h2 className="text-2xl font-bold text-slate-900">Pricing Terms</h2>
+      {/* pricing terms */}
+      <section className="max-w-4xl mx-auto mb-12">
+        <div className="flex items-center gap-3 mb-6">
+          <DollarSign className="w-6 h-6 text-blue-600" />
+          <h2 className="text-2xl font-bold text-slate-900">Pricing Terms</h2>
+        </div>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Calendar className="w-5 h-5 text-blue-600" />
+              <h3 className="text-lg font-semibold">Month-to-Month Contract</h3>
+            </div>
+            <p className="text-slate-700"><span className="font-semibold">First Month:</span> 20% commission</p>
+            <p className="text-slate-700"><span className="font-semibold">Ongoing:</span> 10%/mo until cancellation</p>
           </div>
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Month-to-Month */}
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
-              <div className="flex items-center gap-2 mb-3">
-                <Calendar className="w-5 h-5 text-blue-600" />
-                <h3 className="text-lg font-semibold text-slate-900">Month-to-Month Contract</h3>
-              </div>
-              <div className="space-y-2">
-                <p className="text-slate-700">
-                  <span className="font-semibold">First Month:</span> 20% commission
-                </p>
-                <p className="text-slate-700">
-                  <span className="font-semibold">Ongoing:</span> 10% per month until cancellation
-                </p>
-              </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <FileText className="w-5 h-5 text-blue-600" />
+              <h3 className="text-lg font-semibold">Long-Term Contract</h3>
             </div>
-            {/* Long-term */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <div className="flex items-center gap-2 mb-3">
-                <FileText className="w-5 h-5 text-blue-600" />
-                <h3 className="text-lg font-semibold text-slate-900">Long-Term Contract</h3>
-              </div>
-              <div className="space-y-2">
-                <p className="text-slate-700">
-                  <span className="font-semibold">Duration:</span> 3-6 months or more
-                </p>
-                <p className="text-slate-700">
-                  <span className="font-semibold">Commission:</span> 15% one-time payment
-                </p>
-              </div>
-            </div>
+            <p className="text-slate-700"><span className="font-semibold">Duration:</span> 3–6 months+</p>
+            <p className="text-slate-700"><span className="font-semibold">Commission:</span> 15% one-time</p>
           </div>
         </div>
+      </section>
 
-        {/* Monthly Subscriptions */}
-        <div>
-          <div className="flex items-center gap-3 mb-6">
-            <Zap className="w-6 h-6 text-green-600" />
-            <h2 className="text-2xl font-bold text-slate-900">Monthly Subscriptions</h2>
-          </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-slate-100">
-                <tr>
-                  <th className="text-left py-4 px-6 font-semibold text-slate-900">Service</th>
-                  <th className="text-right py-4 px-6 font-semibold text-slate-900">Monthly Cost</th>
+
+      {/* monthly subs */}
+      <section className="max-w-4xl mx-auto">
+        <div className="flex items-center gap-3 mb-6">
+          <Zap className="w-6 h-6 text-green-600" />
+          <h2 className="text-2xl font-bold text-slate-900">Monthly Subscriptions</h2>
+        </div>
+
+        <div className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="text-left py-4 px-6 font-semibold">Service</th>
+                <th className="text-right py-4 px-6 font-semibold">Monthly Cost</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {items.map((item) => (
+                <tr
+                  key={item.name}
+                  className={[
+                    item.alreadyPaid   && 'bg-green-50 border-l-4 border-green-400',
+                    item.highlightYellow&& 'bg-yellow-50 border-l-4 border-yellow-400',
+                    item.notDueYet     && 'bg-yellow-50 border-l-4 border-yellow-400',
+                  ].filter(Boolean).join(' ')}
+                >
+                  <td className="py-4 px-6 align-top text-slate-700">
+                    <div className="flex items-center gap-2">
+                      <span>{item.name}</span>
+                      {item.alreadyPaid && <span className="text-green-600">✓</span>}
+                      {(item.notDueYet || item.highlightYellow) && <span className="text-yellow-600">⚠️</span>}
+                    </div>
+                    <span className="text-sm text-slate-500 block">{item.desc}</span>
+                    {item.alreadyPaid   && <span className="text-sm text-green-700 block">Already paid</span>}
+                    {item.reminder      && <span className="text-xs italic text-slate-500 block">{item.reminder}</span>}
+                    {item.notDueYet && (
+                      <>
+                        <span className="text-sm text-yellow-700 block">{item.due}</span>
+                        <span className="text-xs text-yellow-600 block">{item.dueSmall}</span>
+                      </>
+                    )}
+                  </td>
+                  <td className="py-4 px-6 text-right align-top font-semibold">
+                    {item.strikeThrough ? (
+                      <span className="text-slate-500"><s>${item.price.toFixed(2)}</s></span>
+                    ) : (
+                      <>${item.price.toFixed(2)}</>
+                    )}
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {items.map((item) => (
-                  <tr
-                    key={item.name}
-                    className={
-                      (item.alreadyPaid ? 'bg-green-50 border-l-4 border-green-400 ' : '') +
-                      (item.notDueYet ? 'bg-yellow-50 border-l-4 border-yellow-400 ' : '') +
-                      (item.highlightYellow ? 'bg-yellow-50 border-l-4 border-yellow-400 ' : '')
-                    }
-                  >
-                    <td className="py-4 px-6 text-slate-700 align-top">
-                      <div className="flex items-center gap-2">
-                        <span>{item.name}</span>
-                        {item.alreadyPaid && <span className="text-green-600">✓</span>}
-                        {(item.notDueYet || item.highlightYellow) && <span className="text-yellow-600">⚠️</span>}
-                      </div>
-                      <span className="text-sm text-slate-500 block">{item.desc}</span>
-                      {item.alreadyPaid && (
-                        <span className="text-sm text-green-700 font-medium block">Already paid</span>
-                      )}
-                      {item.reminder && (
-                        <span className="text-xs text-slate-500 block italic">{item.reminder}</span>
-                      )}
-                      {item.notDueYet && (
-                        <>
-                          <span className="text-sm text-yellow-700 font-medium block">{item.due}</span>
-                          <span className="text-xs text-yellow-600 block">{item.dueSmall}</span>
-                        </>
-                      )}
-                    </td>
-                    <td className="py-4 px-6 text-right font-semibold text-slate-900 align-top">
-                      {item.strikeThrough ? (
-                        <span className="text-slate-500">
-                          <s>${item.price.toFixed(2)}</s>
-                        </span>
-                      ) : (
-                        <>${item.price.toFixed(2)}</>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Summary */}
-          <div className="flex flex-col items-end pt-4">
-            <div className="text-slate-500 text-lg">
-              <s>Total of all subscriptions: ${fullTotal.toFixed(2)}</s>
-            </div>
-            <div className="text-xl font-bold text-slate-900 mt-1">
-              Total Due Today: ${totalDueToday.toFixed(2)}
-            </div>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
 
-        {/* Reminder & Footer */}
-        <div className="mt-8 flex items-start gap-2 text-sm text-slate-600">
-          <Info className="w-4 h-4 mt-0.5 text-blue-600" />
-          <p>
-            Please ensure Sales Navigator is settled promptly, and remember the Email Accounts fee isn’t due until 15 September.
-          </p>
+        {/* summary */}
+        <div className="flex flex-col items-end pt-4">
+          <div className="text-slate-500 text-lg"><s>Total: ${fullTotal.toFixed(2)}</s></div>
+          <div className="text-xl font-bold">Total Due Today: ${totalDueToday.toFixed(2)}</div>
         </div>
-        <div className="mt-12 pt-8 border-t border-slate-200 text-center">
-          <p className="text-sm text-slate-500">
-            This pricing structure is effective immediately and subject to the agreed terms of service.
-          </p>
-          <p className="text-sm text-slate-500 mt-2">
-            For questions or clarifications, please contact BookedByCold directly.
-          </p>
-        </div>
-      </div>
-    </div>
+      </section>
+
+      {/* reminder */}
+      <section className="max-w-4xl mx-auto mt-8 flex items-start gap-2 text-sm text-slate-600">
+        <Info className="w-4 h-4 mt-0.5 text-blue-600" />
+        <p>Please settle Sales Navigator promptly; Email Accounts isn’t due until 15 Sep.</p>
+      </section>
+
+      <footer className="max-w-4xl mx-auto mt-12 pt-8 border-t border-slate-200 text-center">
+        <p className="text-sm text-slate-500">Pricing structure effective immediately per agreed terms.</p>
+        <p className="text-sm text-slate-500 mt-2">Questions? Contact BookedByCold.</p>
+      </footer>
+    </main>
   );
 }
 
-function App() {
+/* ---------- route definitions ---------- */
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/overview" replace />} />
+      <Route path="/overview"  element={<DashboardLayout><Overview /></DashboardLayout>} />
+      <Route path="/crm"       element={<DashboardLayout><CRM /></DashboardLayout>} />
+      <Route path="/leads"     element={<DashboardLayout><Leads /></DashboardLayout>} />
+      <Route path="/campaigns" element={<DashboardLayout><Campaigns /></DashboardLayout>} />
+      <Route path="/finance"   element={<DashboardLayout><Finance /></DashboardLayout>} />
+      <Route path="*" element={<Navigate to="/overview" replace />} />
+      <Route path="/reports" element={<DashboardLayout><Reports /></DashboardLayout>
+  }
+/>
+    </Routes>
+  );
+}
+
+/* ---------- top-level auth wrapper ---------- */
+export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Check if user is already authenticated in this session
-    const authenticated = sessionStorage.getItem('tlnAuthenticated');
-    if (authenticated === 'true') {
+    const sessionAuth = sessionStorage.getItem('tlnAuthenticated');
+    const localAuth   = localStorage.getItem('tlnAuthenticated');
+    const authExpiry  = localStorage.getItem('tlnAuthExpiry');
+
+    if (sessionAuth === 'true') {
       setIsAuthenticated(true);
+    } else if (localAuth === 'true' && authExpiry && Date.now() < Number(authExpiry)) {
+      setIsAuthenticated(true);
+    } else {
+      localStorage.removeItem('tlnAuthenticated');
+      localStorage.removeItem('tlnAuthExpiry');
     }
   }, []);
 
-  const handleAuthenticated = () => {
-    setIsAuthenticated(true);
-  };
-
-  // If not authenticated, show password protection
   if (!isAuthenticated) {
-    return <PasswordProtection onAuthenticated={handleAuthenticated} />;
+    return <PasswordProtection onAuthenticated={() => setIsAuthenticated(true)} />;
   }
 
   return (
     <Router>
-      <Routes>
-        <Route path="/finance" element={<TermsAndPricing />} />
-        <Route path="/" element={<ClientDashboard />} />
-      </Routes>
+      <AppRoutes />
     </Router>
   );
 }
-
-export default App;
