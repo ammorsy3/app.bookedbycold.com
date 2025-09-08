@@ -86,7 +86,7 @@ export default function PasswordProtection({ onAuthenticated, clientName = 'Clie
             </p>
             <div className="bg-gray-50 rounded-lg p-4 mb-6">
               <code className="text-sm text-gray-700">
-                app.bookedbycold.com/[your-client-name]/overview
+                app.bookedbycold.com/[project-name]/
               </code>
             </div>
             <p className="text-sm text-gray-500">
