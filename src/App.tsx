@@ -150,8 +150,10 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
         Online
       </span>
     </span>
-      <LastUpdated date="9/7/2025, 6:37 PM 🌜" />
-
+  </p>
+  <p className="text-xs text-gray-400">
+    Last update:&nbsp;
+    <time dateTime="2025-09-07T18:37:00">9/7/2025, 6:37 PM 🌜</time>
   </p>
 
 </div>
