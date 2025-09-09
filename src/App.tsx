@@ -94,6 +94,17 @@ function NovuInbox({ subscriberId }: { subscriberId: string }) {
   }, [subscriberId]); 
   return <div id="notification-inbox" ref={inboxRef} />;
 }
+/* ---------- Last-Updated Stamp ---------- */
+function LastUpdated({ date = '9/7/2025, 6:37 PM 🌜' }) {
+  return (
+    <p className="text-right text-xs text-gray-500 mt-1">
+      Last update:&nbsp;
+      <time dateTime="2025-09-07">{date}</time>
+    </p>
+  );
+}
+
+
 /* ---------- Dashboard Layout ---------- */
 function DashboardLayout({ clientKey }: { clientKey: string }) {
   const location = useLocation();
@@ -138,6 +149,7 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
                 <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">Online</span>
               </span>
             </p>
+            <LastUpdated date="7 September 2025" />
           </div>
           <div className="flex items-center gap-6">
                   <NovuInbox subscriberId="68be39f13c95e3a79082a7a9" />
