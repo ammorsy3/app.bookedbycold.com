@@ -104,6 +104,41 @@ function LastUpdated({ date = '9/7/2025, 6:37 PM 🌜' }) {
   );
 }
 
+function LastUpdatedCST() {
+  const [stamp, setStamp] = useState(() => formatCST(new Date()));
+
+  // Refresh every minute so the display stays accurate
+  useEffect(() => {
+    const id = setInterval(() => setStamp(formatCST(new Date())), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <p className="text-xs text-gray-400">
+      Last update:&nbsp;
+      <time dateTime={stamp.iso}>{stamp.pretty}</time>
+    </p>
+  );
+}
+
+function formatCST(date) {
+  // America/Chicago automatically switches between CST (UTC-6) and CDT (UTC-5)
+  const options = {
+    timeZone: 'America/Chicago',
+    month: 'numeric',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  };
+  const pretty = date.toLocaleString('en-US', options);
+  const iso = new Date(
+    date.toLocaleString('en-US', { timeZone: 'America/Chicago' })
+  ).toISOString();
+  return { pretty, iso };
+}
+
+
 
 /* ---------- Dashboard Layout ---------- */
 function DashboardLayout({ clientKey }: { clientKey: string }) {
@@ -138,24 +173,20 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
     navigate('/login');
   };
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
-          <div>
+    <div>
   <h1 className="text-3xl font-bold text-gray-900">{clientName}</h1>
-  <p className="text-lg text-gray-600 mt-1">
+
+  <p className="text-lg text-gray-600">
     <span className="inline-flex items-center gap-2">
-      Welcome Travis 👋
+      Welcome&nbsp;Travis&nbsp;👋
       <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">
         Online
       </span>
     </span>
   </p>
-  <p className="text-xs text-gray-400">
-    Last update:&nbsp;
-    <time dateTime="2025-09-07T18:37:00">9/7/2025, 6:37 PM 🌜</time>
-  </p>
 
+  {/* live CST timestamp */}
+  <LastUpdatedCST />
 </div>
 
           <div className="flex items-center gap-6">
