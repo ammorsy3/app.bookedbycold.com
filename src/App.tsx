@@ -167,7 +167,7 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
   <p className="text-sm font-medium text-gray-900">Travis Lairson</p>
   <p className="text-xs text-gray-500">{clientName}</p>
   <p className="text-[11px] text-gray-400">
-    Last update:&nbsp;
+    Current Time:&nbsp;
     <time dateTime={new Date().toISOString()}>
     {new Date().toLocaleString("en-US", {
       dateStyle: "short",
