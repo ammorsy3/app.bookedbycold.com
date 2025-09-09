@@ -142,15 +142,20 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
       <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{clientName}</h1>
-            <p className="text-lg text-gray-600 mt-1">
-              <span className="inline-flex items-center gap-2">
-                Welcome Travis 👋
-                <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">Online</span>
-              </span>
-            </p>
-            <LastUpdated date="7 September 2025" />
-          </div>
+  <h1 className="text-3xl font-bold text-gray-900">{clientName}</h1>
+  <p className="text-lg text-gray-600 mt-1">
+    <span className="inline-flex items-center gap-2">
+      Welcome Travis 👋
+      <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">
+        Online
+      </span>
+    </span>
+  </p>
+
+  {/* NEW LINE */}
+  <LastUpdated date="9/7/2025, 6:37 PM 🌜" />
+</div>
+
           <div className="flex items-center gap-6">
                   <NovuInbox subscriberId="68be39f13c95e3a79082a7a9" />
             <div className="relative">
