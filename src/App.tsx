@@ -150,10 +150,10 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
         Online
       </span>
     </span>
+      <LastUpdated date="9/7/2025, 6:37 PM 🌜" />
+
   </p>
 
-  {/* NEW LINE */}
-  <LastUpdated date="9/7/2025, 6:37 PM 🌜" />
 </div>
 
           <div className="flex items-center gap-6">
