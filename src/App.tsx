@@ -163,7 +163,14 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
             <div className="relative">
               <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg" aria-label="Profile menu">
                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center"><span className="text-sm font-semibold text-blue-600">T</span></div>
-                <div className="hidden md:block text-left"><p className="text-sm font-medium text-gray-900">Travis Lairson</p><p className="text-xs text-gray-500">{clientName}</p><p className="text-[11px] text-gray-400">Last update:&nbsp;<time dateTime="9/7/2025, 6:37 PM 🌜">toISOString()</time></p></div>
+<div className="hidden md:block text-left">
+  <p className="text-sm font-medium text-gray-900">Travis Lairson</p>
+  <p className="text-xs text-gray-500">{clientName}</p>
+  <p className="text-[11px] text-gray-400">
+    Last update:&nbsp;
+    <time dateTime="2025-09-09T01:20:12">9/9/2025, 1:20 AM 🌜</time>
+  </p>
+</div>
                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
               </button>
               {profileMenuOpen && (
