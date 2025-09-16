@@ -213,8 +213,8 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
 function Overview() {
   const stats = [
     { label: 'Active Campaigns', value: '5', icon: Activity, color: 'text-blue-600' },
-    { label: 'Opportunity Value', value: '$58,500', icon: TrendingUp, color: 'text-green-600' },
-    { label: 'Response Rate', value: '1.45%', icon: Target, color: 'text-purple-600' },
+    { label: 'Opportunity Value', value: '$108,000', icon: TrendingUp, color: 'text-green-600' },
+    { label: 'Response Rate', value: '2.08%', icon: Target, color: 'text-purple-600' },
     { label: 'Subscriptions', value: '7', icon: CreditCard, color: 'text-orange-600' },
   ];
   return (
