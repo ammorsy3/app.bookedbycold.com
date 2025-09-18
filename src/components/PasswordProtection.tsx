@@ -20,6 +20,11 @@ export default function PasswordProtection() {
       email: 'travis.lairson@tlnconsultinggroup.com',
       password: 'A7med&Travis@TLN',
     },
+    // Testing credentials for Ahmed
+    'testclient': {
+      email: 'ahmorsy07@gmail.com',
+      password: 'A7med&Do3a',
+    },
     // You can add more clients here in the future
     // 'newclient': {
     //   email: 'contact@newclient.com',
