@@ -34,15 +34,15 @@ const config: ClientConfig = {
   ],
   financeData: {
     items: [
-      { name: 'Make', desc: 'Platforms & AI integration', price: 36.38 },
-      { name: 'Anthropic', desc: 'LLM for email writing', price: 40.0 },
-      { name: 'Perplexity', desc: 'LLM for lead research & personalization', price: 40.0 },
+      { name: 'Make', desc: 'Platforms & AI integration', price: 36.38, alreadyPaid: true, strikeThrough: true },
+      { name: 'Anthropic', desc: 'LLM for email writing', price: 40.0, alreadyPaid: true, strikeThrough: true },
+      { name: 'Perplexity', desc: 'LLM for lead research & personalization', price: 40.0, alreadyPaid: true, strikeThrough: true },
       { name: 'Sales Navigator', desc: 'Lead generation', price: 119.0, reminder: 'Renews 29 Sep', highlightYellow: true },
       { name: 'Instantly.ai', desc: 'Cold emailing — hyper-growth plan', price: 97.0, alreadyPaid: true, strikeThrough: true },
       { name: 'Anymail Finder', desc: 'Lead enrichment', price: 199.0, alreadyPaid: true, strikeThrough: true },
-      { name: 'Email Accounts', desc: '≈1,500 emails/day', price: 240.0, notDueYet: true, due: 'Due 15 Sep', dueSmall: 'Payment can wait' }
+      { name: 'Email Accounts', desc: '≈1,500 emails/day', price: 240.0, alreadyPaid: true, strikeThrough: true }
     ],
-    totalDueToday: 116.0
+    totalDueToday: 119.0
   }
 };
 

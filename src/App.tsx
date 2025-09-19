@@ -95,11 +95,19 @@ function NovuInbox({ subscriberId }: { subscriberId: string }) {
   return <div id="notification-inbox" ref={inboxRef} />;
 }
 /* ---------- Last-Updated Stamp ---------- */
-function LastUpdated({ date = '9/7/2025, 6:37 PM 🌜' }) {
+function LastUpdated({
+  label = 'Last overview tab update',
+  date = '9/17/2025, 5:00 PM 🌜',
+  dateTime = '2025-09-17T17:00:00',
+}: {
+  label?: string;
+  date?: string;
+  dateTime?: string;
+}) {
   return (
-    <p className="text-right text-xs text-gray-500 mt-1">
-      Date:&nbsp;
-      <time dateTime="2025-09-07">{date}</time>
+    <p className="text-xs text-gray-400">
+      {label}:&nbsp;
+      <time dateTime={dateTime}>{date}</time>
     </p>
   );
 }
@@ -151,15 +159,19 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
       </span>
     </span>
   </p>
-  <p className="text-xs text-gray-400">
-    Last overview tab update:&nbsp;
-    <time dateTime="2025-09-07T18:37:00">9/17/2025, 5:00 PM 🌜</time>
-  </p>
+  <LastUpdated />
 
 </div>
 
           <div className="flex items-center gap-6">
-                  <NovuInbox subscriberId="68be39f13c95e3a79082a7a9" />
+            <div className="relative">
+              <NovuInbox subscriberId="68be39f13c95e3a79082a7a9" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-2 -right-2 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold text-white">
+                  {unreadCount}
+                </span>
+              )}
+            </div>
             <div className="relative">
               <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg" aria-label="Profile menu">
                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center"><span className="text-sm font-semibold text-blue-600">T</span></div>
@@ -294,16 +306,16 @@ function Reports() {
 /* ---------- Finance ---------- */
 function Finance() {
   const items = [
-    { name: 'Make', desc: 'Platforms & AI integration', price: 36.38 },
-    { name: 'Anthropic', desc: 'LLM for email writing', price: 40.0 },
-    { name: 'Perplexity', desc: 'LLM for lead research & personalization', price: 40.0 },
+    { name: 'Make', desc: 'Platforms & AI integration', price: 36.38, alreadyPaid: true, strikeThrough: true },
+    { name: 'Anthropic', desc: 'LLM for email writing', price: 40.0, alreadyPaid: true, strikeThrough: true },
+    { name: 'Perplexity', desc: 'LLM for lead research & personalization', price: 40.0, alreadyPaid: true, strikeThrough: true },
     { name: 'Sales Navigator', desc: 'Lead generation', price: 119.0, reminder: 'Renews 29 Sep', highlightYellow: true },
     { name: 'Instantly.ai', desc: 'Cold emailing — hyper-growth plan', price: 97.0, alreadyPaid: true, strikeThrough: true },
     { name: 'Anymail Finder', desc: 'Lead enrichment', price: 199.0, alreadyPaid: true, strikeThrough: true },
-    { name: 'Email Accounts', desc: '≈1,500 emails/day', price: 240.0, notDueYet: true, due: 'Due 15 Sep', dueSmall: 'Payment can wait' },
+    { name: 'Email Accounts', desc: '≈1,500 emails/day', price: 240.0, alreadyPaid: true, strikeThrough: true },
   ];
   const fullTotal = items.reduce((s, i) => s + i.price, 0);
-  const totalDueToday = 116.0;
+  const totalDueToday = 119.0;
   return (
     <main className="max-w-7xl mx-auto px-6 py-8">
       <div className="bg-slate-50 border-b border-slate-200 mb-8">
@@ -323,7 +335,7 @@ function Finance() {
         </div>
         <div className="flex flex-col items-end pt-4"><div className="text-slate-500 text-lg"><s>Total: ${fullTotal.toFixed(2)}</s></div><div className="text-xl font-bold">Total Due Today: ${totalDueToday.toFixed(2)}</div></div>
       </section>
-      <section className="max-w-4xl mx-auto mt-8 flex items-start gap-2 text-sm text-slate-600"><Info className="w-4 h-4 mt-0.5 text-blue-600" /><p>Please settle Sales Navigator promptly; Email Accounts isn't due until 15 Sep.</p></section>
+      <section className="max-w-4xl mx-auto mt-8 flex items-start gap-2 text-sm text-slate-600"><Info className="w-4 h-4 mt-0.5 text-blue-600" /><p>All services are paid in full except Sales Navigator, which renews on 29 Sep.</p></section>
       <footer className="max-w-4xl mx-auto mt-12 pt-8 border-t border-slate-200 text-center"><p className="text-sm text-slate-500">Pricing structure effective immediately per agreed terms.</p><p className="text-sm text-slate-500 mt-2">Questions? Contact BookedByCold.</p></footer>
     </main>
   );
