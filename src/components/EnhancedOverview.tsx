@@ -155,23 +155,15 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
       const webhookUrl = clientConfig.integrations.webhook.url;
 
-      // Always trigger webhook when refresh button is clicked
+      // Trigger webhook when refresh button is clicked (only ONE webhook call)
       await triggerWebhook(webhookUrl);
-      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      const webhookData = await fetchWebhookData(webhookUrl);
-
-      if (webhookData) {
-        updateMetricsFromWebhook(webhookData);
-        return;
-      }
-
-      console.log('Webhook returned invalid data, falling back to simulated data');
+      console.log('Webhook trigger sent. Using simulated data for display.');
     } else {
       console.log('Webhook not configured, using simulated data');
     }
 
-    // Fallback to simulated data
+    // Always use simulated data for display
     const simulatedData = simulateWebhookData();
     updateMetricsFromWebhook(simulatedData);
   };
