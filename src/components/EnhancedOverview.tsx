@@ -148,18 +148,16 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     }
   };
 
-  const handleRefresh = async (shouldTriggerWebhook: boolean = false) => {
+  const handleRefresh = async () => {
     const clientConfig = await getClientConfig(clientKey);
 
     // Check if webhook is enabled and configured
     if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
       const webhookUrl = clientConfig.integrations.webhook.url;
 
-      // Only trigger webhook if explicitly requested (from date change)
-      if (shouldTriggerWebhook) {
-        await triggerWebhook(webhookUrl);
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
+      // Always trigger webhook when refresh button is clicked
+      await triggerWebhook(webhookUrl);
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       const webhookData = await fetchWebhookData(webhookUrl);
 
@@ -211,10 +209,6 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     const [start, end] = dates;
     setStartDate(start);
     setEndDate(end);
-
-    if (start && end) {
-      handleRefresh(true);
-    }
   };
 
   const quickActions = [
