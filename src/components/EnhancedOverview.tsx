@@ -33,20 +33,6 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     totalInterested: 0,
   });
 
-  // Fetch initial data on mount
-  useEffect(() => {
-    const loadInitialData = async () => {
-      const webhookUrl = 'https://hook.us2.make.com/f36n7r86d2wd8xlq51pwqlbh4koagp8d';
-      const webhookData = await fetchWebhookData(webhookUrl);
-
-      if (webhookData) {
-        updateMetricsFromWebhook(webhookData);
-      }
-    };
-
-    loadInitialData();
-  }, []);
-
   const fetchWebhookData = async (webhookUrl: string): Promise<WebhookResponse | null> => {
     try {
       const response = await fetch(webhookUrl, {
@@ -133,6 +119,24 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       updateMetricsFromWebhook(webhookData);
     }
   };
+
+  // Fetch initial data on mount
+  useEffect(() => {
+    const loadInitialData = async () => {
+      console.log('Loading initial webhook data...');
+      const webhookUrl = 'https://hook.us2.make.com/f36n7r86d2wd8xlq51pwqlbh4koagp8d';
+      const webhookData = await fetchWebhookData(webhookUrl);
+
+      if (webhookData) {
+        console.log('Initial webhook data received, updating dashboard...');
+        updateMetricsFromWebhook(webhookData);
+      } else {
+        console.log('No webhook data received on initial load');
+      }
+    };
+
+    loadInitialData();
+  }, []);
 
   const quickActions = [
     {
