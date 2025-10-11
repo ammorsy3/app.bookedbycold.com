@@ -117,11 +117,11 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   };
 
   const handleRefresh = async () => {
-    const clientConfig = getClientConfig(clientKey);
+    const clientConfig = await getClientConfig(clientKey);
     
     // Check if webhook is enabled and configured
-    if (clientConfig.webhook.enabled && clientConfig.webhook.url) {
-      const webhookUrl = clientConfig.webhook.url;
+    if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
+      const webhookUrl = clientConfig.integrations.webhook.url;
       
       await triggerWebhook(webhookUrl);
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -146,12 +146,12 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   // Fetch initial data on mount
   useEffect(() => {
     const loadInitialData = async () => {
-      const clientConfig = getClientConfig(clientKey);
+      const clientConfig = await getClientConfig(clientKey);
       
       // Check if webhook is enabled and configured
-      if (clientConfig.webhook.enabled && clientConfig.webhook.url) {
+      if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
         console.log('Loading initial webhook data...');
-        const webhookData = await fetchWebhookData(clientConfig.webhook.url);
+        const webhookData = await fetchWebhookData(clientConfig.integrations.webhook.url);
 
         if (webhookData) {
           console.log('Initial webhook data received, updating dashboard...');
