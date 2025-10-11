@@ -204,16 +204,14 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     loadInitialData();
   }, [clientKey]);
 
-  useEffect(() => {
-    if (startDate && endDate) {
-      handleRefresh();
-    }
-  }, [startDate, endDate]);
-
   const handleDateChange = (dates: [Date | null, Date | null]) => {
     const [start, end] = dates;
     setStartDate(start);
     setEndDate(end);
+
+    if (start && end) {
+      handleRefresh();
+    }
   };
 
   const quickActions = [
