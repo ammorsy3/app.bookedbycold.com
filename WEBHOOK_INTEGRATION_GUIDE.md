@@ -45,7 +45,7 @@ The system also supports these alternate field names:
 ```
 User clicks "Refresh Overview Tab" button
     ↓
-60-second cooldown starts
+15-second cooldown starts
     ↓
 handleRefresh() function triggered
 ```
@@ -53,14 +53,20 @@ handleRefresh() function triggered
 ### Data Fetch Process
 ```typescript
 handleRefresh() {
-  1. Load client configuration
-  2. Check if webhook is enabled
-  3. If enabled:
-     → Fetch data from webhook URL
+  1. Send POST trigger to webhook
+     → URL: https://hook.us2.make.com/f36n7r86d2wd8xlq51pwqlbh4koagp8d
+     → Body: { action: 'refresh_dashboard', client_key: clientKey, timestamp }
+     → This initiates data collection in Make.com
+
+  2. Wait 2 seconds for webhook to process
+
+  3. Fetch updated data from webhook (GET request)
+     → Same URL: https://hook.us2.make.com/f36n7r86d2wd8xlq51pwqlbh4koagp8d
      → Parse JSON response
      → Map fields to dashboard format
      → Update all visualizations
-  4. If disabled or fetch fails:
+
+  4. If fetch fails:
      → Use simulated data (for testing)
      → Update visualizations
 }
@@ -171,16 +177,48 @@ export default config;
 
 ## Webhook Endpoint Requirements
 
-### HTTP Method
-- **GET** request (default)
-- Can be modified to POST if needed
+### HTTP Methods
 
-### Headers
+The webhook URL handles TWO types of requests:
+
+#### 1. POST Request (Trigger)
+Sent when user clicks "Refresh Data" button:
+
+**URL:** `https://hook.us2.make.com/f36n7r86d2wd8xlq51pwqlbh4koagp8d`
+
+**Method:** POST
+
+**Headers:**
 ```
 Content-Type: application/json
 ```
 
-### Response Format
+**Body:**
+```json
+{
+  "action": "refresh_dashboard",
+  "client_key": "tlnconsultinggroup",
+  "timestamp": "2025-10-11T10:30:00.000Z"
+}
+```
+
+**Purpose:** Triggers Make.com scenario to collect fresh data from CRM/database
+
+**Response:** Not required (fire-and-forget)
+
+#### 2. GET Request (Fetch)
+Sent 2 seconds after POST trigger:
+
+**URL:** `https://hook.us2.make.com/f36n7r86d2wd8xlq51pwqlbh4koagp8d`
+
+**Method:** GET
+
+**Headers:**
+```
+Content-Type: application/json
+```
+
+**Response Format:**
 Must return valid JSON with numeric values:
 
 ```json
@@ -313,18 +351,24 @@ Result:
    - Button becomes disabled
    - Text changes to "Refreshing..."
    - Spinning icon animation
+   - POST trigger sent to webhook
 
-2. **Data fetches from webhook**
-   - HTTP request to webhook URL
+2. **Webhook processes data**
+   - Make.com scenario receives trigger
+   - Data collection begins
+   - 2-second wait for processing
+
+3. **Data fetches from webhook**
+   - GET request to webhook URL
    - JSON response parsed
    - Dashboard state updated
 
-3. **Cooldown starts**
-   - 60-second countdown begins
-   - Button shows "Refresh in 45s", "Refresh in 30s", etc.
+4. **Cooldown starts**
+   - 15-second countdown begins (testing mode)
+   - Button shows "Refresh in 12s", "Refresh in 8s", etc.
    - Last updated timestamp displayed
 
-4. **Cooldown expires**
+5. **Cooldown expires**
    - Button re-enabled
    - Text returns to "Refresh Data"
    - Ready for next refresh
@@ -334,7 +378,14 @@ Result:
 Cooldown survives:
 - Page refreshes (stored in localStorage)
 - Tab switches
-- Browser restarts (if within 60 seconds)
+- Browser restarts (if within 15 seconds)
+
+### Cooldown Configuration
+
+Current setting: **15 seconds** (for testing purposes)
+- Allows rapid testing of webhook integration
+- Can be increased to 60 seconds for production
+- Change in `EnhancedOverview.tsx`: `<RefreshButton cooldownSeconds={15} />`
 
 ## Integration with Insights
 

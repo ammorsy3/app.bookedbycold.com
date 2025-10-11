@@ -55,23 +55,44 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     }
   };
 
+  const triggerWebhook = async (webhookUrl: string): Promise<void> => {
+    try {
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'refresh_dashboard',
+          client_key: clientKey,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+      console.log('Webhook trigger sent successfully');
+    } catch (error) {
+      console.error('Webhook trigger error:', error);
+    }
+  };
+
   const handleRefresh = async () => {
-    const config = await getClientConfig(clientKey);
+    const webhookUrl = 'https://hook.us2.make.com/f36n7r86d2wd8xlq51pwqlbh4koagp8d';
 
-    if (config?.integrations.webhook?.enabled && config.integrations.webhook.url) {
-      const webhookData = await fetchWebhookData(config.integrations.webhook.url);
+    await triggerWebhook(webhookUrl);
 
-      if (webhookData) {
-        setMetricsData({
-          replyCount: webhookData.reply_count || webhookData.reply_count_unique || 0,
-          emailsSentCount: webhookData.emails_sent_count || 0,
-          newLeadsContactedCount: webhookData.new_leads_contacted_count || 0,
-          totalOpportunities: webhookData.total_opportunities || 0,
-          totalOpportunityValue: webhookData.total_opportunity_value || 0,
-          totalInterested: webhookData.total_interested || 0,
-        });
-        return;
-      }
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const webhookData = await fetchWebhookData(webhookUrl);
+
+    if (webhookData) {
+      setMetricsData({
+        replyCount: webhookData.reply_count || webhookData.reply_count_unique || 0,
+        emailsSentCount: webhookData.emails_sent_count || 0,
+        newLeadsContactedCount: webhookData.new_leads_contacted_count || 0,
+        totalOpportunities: webhookData.total_opportunities || 0,
+        totalOpportunityValue: webhookData.total_opportunity_value || 0,
+        totalInterested: webhookData.total_interested || 0,
+      });
+      return;
     }
 
     const simulatedData = await simulateWebhookData(clientKey);
@@ -130,7 +151,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Campaign Performance Dashboard</h2>
           <p className="text-gray-600">Real-time metrics and automated insights for data-driven decisions</p>
         </div>
-        <RefreshButton onRefresh={handleRefresh} cooldownSeconds={60} />
+        <RefreshButton onRefresh={handleRefresh} cooldownSeconds={15} />
       </div>
 
       <div className="space-y-8">
