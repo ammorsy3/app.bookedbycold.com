@@ -27,6 +27,10 @@ export interface ClientConfig {
     novu: {
       subscriberId: string;
     };
+    webhook?: {
+      url: string;
+      enabled: boolean;
+    };
   };
   stats: Array<{
     label: string;

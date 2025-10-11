@@ -28,6 +28,7 @@ import {
   CreditCard,
 } from 'lucide-react';
 import PasswordProtection from './components/PasswordProtection';
+import { EnhancedOverview } from './components/EnhancedOverview';
 // =================================================================================
 // 1. UTILITY AND LAYOUT COMPONENTS
 // =================================================================================
@@ -209,42 +210,9 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
 // =================================================================================
 // 2. ALL YOUR PAGE COMPONENTS
 // =================================================================================
-/* ---------- Overview ---------- */
 function Overview() {
-  const stats = [
-    { label: 'Active Campaigns', value: '5', icon: Activity, color: 'text-blue-600' },
-    { label: 'Opportunity Value', value: '$108,000', icon: TrendingUp, color: 'text-green-600' },
-    { label: 'Response Rate', value: '2.08%', icon: Target, color: 'text-purple-600' },
-    { label: 'Subscriptions', value: '7', icon: CreditCard, color: 'text-orange-600' },
-  ];
-  return (
-    <main className="max-w-7xl mx-auto px-6 py-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {stats.map((s) => (
-          <div key={s.label} className="bg-white rounded-lg shadow-sm border p-6">
-            <div className="flex items-center justify-between"><div><p className="text-sm font-medium text-gray-600">{s.label}</p><p className="text-2xl font-bold text-gray-900 mt-1">{s.value}</p></div><s.icon className={`w-8 h-8 ${s.color}`} /></div>
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8" role="main">
-        <Link to="../crm" className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all group">
-          <div className="p-8"><div className="flex items-start justify-between mb-6"><div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform"><Database className="w-6 h-6 text-white" /></div><ExternalLink className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" /></div><h3 className="text-xl font-bold text-gray-900 mb-2">CRM Dashboard</h3><p className="text-gray-600 mb-4">Access your complete customer relationship management system</p><div className="flex items-center justify-between"><span className="text-sm font-medium text-gray-500 group-hover:text-gray-700">31% of our calls are good fit!</span><a href="https://airtable.com/appdepbMC8HjPr3D9/shrGOao87lyCG8yKN" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg font-medium group-hover:shadow-md transition-colors">Access <ExternalLink className="w-4 h-4" /></a></div></div>
-        </Link>
-        <Link to="../finance" className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all group">
-          <div className="p-8"><div className="flex items-start justify-between mb-6"><div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform"><DollarSign className="w-6 h-6 text-white" /></div></div><h3 className="text-xl font-bold text-gray-900 mb-2">Financial Overview</h3><p className="text-gray-600 mb-4">Monthly subscriptions, terms, and pricing details</p><div className="flex items-center justify-between"><span className="text-sm font-medium text-gray-500 group-hover:text-gray-700">$119.00 due today (LinkedIn Sales Navigator)</span><span className="inline-flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg font-medium group-hover:shadow-md">Access →</span></div></div>
-        </Link>
-        <Link to="../leads" className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all group">
-          <div className="p-8"><div className="flex items-start justify-between mb-6"><div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform"><Target className="w-6 h-6 text-white" /></div><ExternalLink className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" /></div><h3 className="text-xl font-bold text-gray-900 mb-2">Leads Dashboard</h3><p className="text-gray-600 mb-4">Track and manage your lead-generation pipeline</p><div className="flex items-center justify-between"><span className="text-sm font-medium text-gray-500 group-hover:text-gray-700">49 new leads</span><a href="https://airtable.com/invite/l?inviteId=invG6X8ERSPZ5Zpc6&inviteToken=e435074069a4e302858da4b37a8e6137c9ff8825aba261372dd4def71bf29808" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg font-medium group-hover:shadow-md transition-colors">Access <ExternalLink className="w-4 h-4" /></a></div></div>
-        </Link>
-        <Link to="../campaigns" className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all group">
-          <div className="p-8"><div className="flex items-start justify-between mb-6"><div className="w-12 h-12 bg-orange-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform"><BarChart3 className="w-6 h-6 text-white" /></div></div><h3 className="text-xl font-bold text-gray-900 mb-2">Campaign Analytics</h3><p className="text-gray-600 mb-4">Monitor email campaigns and outreach performance</p><div className="flex items-center justify-between"><span className="text-sm font-medium text-gray-500 group-hover:text-gray-700">18.2K Emails Sent</span><span className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg font-medium group-hover:shadow-md">Access →</span></div></div>
-        </Link>
-        <Link to="../reports" className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all group">
-          <div className="p-8"><div className="flex items-start justify-between mb-6"><div className="w-12 h-12 bg-indigo-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform"><FileText className="w-6 h-6 text-white" /></div><ExternalLink className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" /></div><h3 className="text-xl font-bold text-gray-900 mb-2">Monthly Reports</h3><p className="text-gray-600 mb-4">View and download detailed campaign PDFs</p><div className="flex items-center justify-between"><span className="text-sm font-medium text-gray-500 group-hover:text-gray-700">Latest file: Aug 2025</span><span className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium group-hover:shadow-md">Open →</span></div></div>
-        </Link>
-      </div>
-    </main>
-  );
+  const { clientKey } = useParams<{ clientKey: string }>();
+  return <EnhancedOverview clientKey={clientKey || 'tlnconsultinggroup'} />;
 }
 /* ---------- CRM ---------- */
 function CRM() {

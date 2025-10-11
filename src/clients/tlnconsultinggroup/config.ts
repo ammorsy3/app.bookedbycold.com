@@ -24,6 +24,10 @@ const config: ClientConfig = {
     },
     novu: {
       subscriberId: '68be39f13c95e3a79082a7a9'
+    },
+    webhook: {
+      url: 'https://hook.us2.make.com/f36n7r86d2wd8xlq51pwqlbh4koagp8d',
+      enabled: true
     }
   },
   stats: [
