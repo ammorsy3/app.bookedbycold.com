@@ -29,10 +29,10 @@ export function DashboardMetrics({ clientKey, onRefresh, isRefreshing, nextRefre
     lastUpdated: new Date().toISOString(),
   });
 
-  const conversionRate = ((metrics.replyCount / metrics.emailsSentCount) * 100).toFixed(2);
+  const responseRate = ((metrics.replyCount / metrics.newLeadsContactedCount) * 100).toFixed(2);
   const opportunityRate = ((metrics.totalOpportunities / metrics.newLeadsContactedCount) * 100).toFixed(2);
   const avgOpportunityValue = (metrics.totalOpportunityValue / metrics.totalOpportunities).toFixed(0);
-  const engagementRate = (((metrics.replyCount + metrics.totalInterested) / metrics.emailsSentCount) * 100).toFixed(2);
+  const engagementRate = (((metrics.replyCount + metrics.totalInterested) / metrics.newLeadsContactedCount) * 100).toFixed(2);
 
   const primaryMetrics = [
     {
@@ -51,7 +51,7 @@ export function DashboardMetrics({ clientKey, onRefresh, isRefreshing, nextRefre
       color: 'bg-green-500',
       textColor: 'text-green-600',
       bgLight: 'bg-green-50',
-      description: `${conversionRate}% response rate`,
+      description: `${responseRate}% response rate`,
     },
     {
       label: 'New Leads Contacted',

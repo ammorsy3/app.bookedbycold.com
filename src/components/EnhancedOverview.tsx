@@ -121,7 +121,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
                 <strong>{metricsData.emailsSentCount.toLocaleString()} emails sent</strong>. Generated{' '}
                 <strong>${(metricsData.totalOpportunityValue / 1000).toFixed(0)}K in pipeline value</strong> from{' '}
                 <strong>{metricsData.totalOpportunities} qualified opportunities</strong>. Response rate of{' '}
-                <strong>{((metricsData.replyCount / metricsData.emailsSentCount) * 100).toFixed(2)}%</strong> demonstrates strong market engagement.
+                <strong>{((metricsData.replyCount / metricsData.newLeadsContactedCount) * 100).toFixed(2)}%</strong> demonstrates strong market engagement.
               </p>
             </div>
           </div>

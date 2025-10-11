@@ -28,10 +28,10 @@ export function AutomatedInsights({
 }: AutomatedInsightsProps) {
   const generateInsights = (): InsightData[] => {
     const insights: InsightData[] = [];
-    const responseRate = (replies / emailsSent) * 100;
+    const responseRate = (replies / leads) * 100;
     const opportunityRate = (opportunities / leads) * 100;
     const avgOpportunityValue = opportunityValue / opportunities;
-    const engagementRate = ((replies + interested) / emailsSent) * 100;
+    const engagementRate = ((replies + interested) / leads) * 100;
 
     if (responseRate > 2.0) {
       insights.push({

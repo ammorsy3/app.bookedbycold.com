@@ -18,17 +18,17 @@ export function PerformanceCharts({ data }: PerformanceChartsProps) {
   const conversionFunnel = [
     { stage: 'Emails Sent', value: data.emailsSent, percentage: 100, color: 'bg-blue-500' },
     { stage: 'Leads Contacted', value: data.leads, percentage: (data.leads / data.emailsSent) * 100, color: 'bg-purple-500' },
-    { stage: 'Replies', value: data.replies, percentage: (data.replies / data.emailsSent) * 100, color: 'bg-green-500' },
-    { stage: 'Interested', value: data.interested, percentage: (data.interested / data.emailsSent) * 100, color: 'bg-cyan-500' },
-    { stage: 'Opportunities', value: data.opportunities, percentage: (data.opportunities / data.emailsSent) * 100, color: 'bg-orange-500' },
+    { stage: 'Replies', value: data.replies, percentage: (data.replies / data.leads) * 100, color: 'bg-green-500' },
+    { stage: 'Interested', value: data.interested, percentage: (data.interested / data.leads) * 100, color: 'bg-cyan-500' },
+    { stage: 'Opportunities', value: data.opportunities, percentage: (data.opportunities / data.leads) * 100, color: 'bg-orange-500' },
   ];
 
   const performanceMetrics = [
     {
-      label: 'Email Response Rate',
-      value: ((data.replies / data.emailsSent) * 100).toFixed(2) + '%',
+      label: 'Response Rate',
+      value: ((data.replies / data.leads) * 100).toFixed(2) + '%',
       target: '2.5%',
-      performance: ((data.replies / data.emailsSent) * 100) >= 2.5 ? 'above' : 'below',
+      performance: ((data.replies / data.leads) * 100) >= 2.5 ? 'above' : 'below',
       icon: TrendingUp,
       color: 'text-green-600',
     },
@@ -50,9 +50,9 @@ export function PerformanceCharts({ data }: PerformanceChartsProps) {
     },
     {
       label: 'Engagement Rate',
-      value: (((data.replies + data.interested) / data.emailsSent) * 100).toFixed(2) + '%',
+      value: (((data.replies + data.interested) / data.leads) * 100).toFixed(2) + '%',
       target: '3.0%',
-      performance: (((data.replies + data.interested) / data.emailsSent) * 100) >= 3.0 ? 'above' : 'below',
+      performance: (((data.replies + data.interested) / data.leads) * 100) >= 3.0 ? 'above' : 'below',
       icon: Activity,
       color: 'text-blue-600',
     },
