@@ -47,7 +47,17 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         return null;
       }
 
-      const data = await response.json();
+      const text = await response.text();
+      
+      // Check if response is valid JSON
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (jsonError) {
+        console.error('Webhook response is not valid JSON:', text);
+        return null;
+      }
+      
       console.log('Raw webhook response:', data);
       console.log('Field types:', {
         reply_count: typeof data.reply_count,
@@ -107,36 +117,60 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   };
 
   const handleRefresh = async () => {
-    const webhookUrl = 'https://hook.us2.make.com/f36n7r86d2wd8xlq51pwqlbh4koagp8d';
-
-    await triggerWebhook(webhookUrl);
-
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    const webhookData = await fetchWebhookData(webhookUrl);
-
-    if (webhookData) {
-      updateMetricsFromWebhook(webhookData);
+    const clientConfig = getClientConfig(clientKey);
+    
+    // Check if webhook is enabled and configured
+    if (clientConfig.webhook.enabled && clientConfig.webhook.url) {
+      const webhookUrl = clientConfig.webhook.url;
+      
+      await triggerWebhook(webhookUrl);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const webhookData = await fetchWebhookData(webhookUrl);
+      
+      if (webhookData) {
+        updateMetricsFromWebhook(webhookData);
+        return;
+      }
+      
+      console.log('Webhook failed, falling back to simulated data');
+    } else {
+      console.log('Webhook disabled, using simulated data');
     }
+
+    // Fallback to simulated data
+    const simulatedData = simulateWebhookData();
+    updateMetricsFromWebhook(simulatedData);
   };
 
   // Fetch initial data on mount
   useEffect(() => {
     const loadInitialData = async () => {
-      console.log('Loading initial webhook data...');
-      const webhookUrl = 'https://hook.us2.make.com/f36n7r86d2wd8xlq51pwqlbh4koagp8d';
-      const webhookData = await fetchWebhookData(webhookUrl);
+      const clientConfig = getClientConfig(clientKey);
+      
+      // Check if webhook is enabled and configured
+      if (clientConfig.webhook.enabled && clientConfig.webhook.url) {
+        console.log('Loading initial webhook data...');
+        const webhookData = await fetchWebhookData(clientConfig.webhook.url);
 
-      if (webhookData) {
-        console.log('Initial webhook data received, updating dashboard...');
-        updateMetricsFromWebhook(webhookData);
+        if (webhookData) {
+          console.log('Initial webhook data received, updating dashboard...');
+          updateMetricsFromWebhook(webhookData);
+          return;
+        }
+        
+        console.log('Webhook failed on initial load, falling back to simulated data');
       } else {
-        console.log('No webhook data received on initial load');
+        console.log('Webhook disabled, using simulated data for initial load');
       }
+      
+      // Fallback to simulated data
+      const simulatedData = simulateWebhookData();
+      updateMetricsFromWebhook(simulatedData);
     };
 
     loadInitialData();
-  }, []);
+  }, [clientKey]);
 
   const quickActions = [
     {
