@@ -25,13 +25,27 @@ interface WebhookResponse {
 
 export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   const [metricsData, setMetricsData] = useState({
-    replyCount: 252,
-    emailsSentCount: 29209,
-    newLeadsContactedCount: 10730,
-    totalOpportunities: 85,
-    totalOpportunityValue: 188500,
-    totalInterested: 87,
+    replyCount: 0,
+    emailsSentCount: 0,
+    newLeadsContactedCount: 0,
+    totalOpportunities: 0,
+    totalOpportunityValue: 0,
+    totalInterested: 0,
   });
+
+  // Fetch initial data on mount
+  useEffect(() => {
+    const loadInitialData = async () => {
+      const webhookUrl = 'https://hook.us2.make.com/f36n7r86d2wd8xlq51pwqlbh4koagp8d';
+      const webhookData = await fetchWebhookData(webhookUrl);
+
+      if (webhookData) {
+        updateMetricsFromWebhook(webhookData);
+      }
+    };
+
+    loadInitialData();
+  }, []);
 
   const fetchWebhookData = async (webhookUrl: string): Promise<WebhookResponse | null> => {
     try {
@@ -64,6 +78,29 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     }
   };
 
+  // Parse and update metrics from webhook data
+  const updateMetricsFromWebhook = (webhookData: WebhookResponse) => {
+    // Convert all values to numbers (handles both string and number inputs)
+    const parseNumber = (value: any): number => {
+      if (value === null || value === undefined || value === '') return 0;
+      const parsed = typeof value === 'string' ? parseInt(value, 10) : Number(value);
+      return isNaN(parsed) ? 0 : parsed;
+    };
+
+    const newMetrics = {
+      replyCount: parseNumber(webhookData.reply_count || webhookData.reply_count_unique),
+      emailsSentCount: parseNumber(webhookData.emails_sent_count),
+      newLeadsContactedCount: parseNumber(webhookData.new_leads_contacted_count),
+      totalOpportunities: parseNumber(webhookData.total_opportunities),
+      totalOpportunityValue: parseNumber(webhookData.total_opportunity_value),
+      totalInterested: parseNumber(webhookData.total_opportunities), // Same as opportunities
+    };
+
+    setMetricsData(newMetrics);
+
+    console.log('Dashboard updated with webhook data:', newMetrics);
+  };
+
   const triggerWebhook = async (webhookUrl: string): Promise<void> => {
     try {
       await fetch(webhookUrl, {
@@ -93,36 +130,8 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     const webhookData = await fetchWebhookData(webhookUrl);
 
     if (webhookData) {
-      // Convert all values to numbers (handles both string and number inputs)
-      const parseNumber = (value: any): number => {
-        if (value === null || value === undefined || value === '') return 0;
-        const parsed = typeof value === 'string' ? parseInt(value, 10) : Number(value);
-        return isNaN(parsed) ? 0 : parsed;
-      };
-
-      setMetricsData({
-        replyCount: parseNumber(webhookData.reply_count || webhookData.reply_count_unique),
-        emailsSentCount: parseNumber(webhookData.emails_sent_count),
-        newLeadsContactedCount: parseNumber(webhookData.new_leads_contacted_count),
-        totalOpportunities: parseNumber(webhookData.total_opportunities),
-        totalOpportunityValue: parseNumber(webhookData.total_opportunity_value),
-        totalInterested: parseNumber(webhookData.total_interested || webhookData.reply_count),
-      });
-
-      console.log('Dashboard updated with webhook data:', {
-        replyCount: parseNumber(webhookData.reply_count),
-        emailsSentCount: parseNumber(webhookData.emails_sent_count),
-        newLeadsContactedCount: parseNumber(webhookData.new_leads_contacted_count),
-        totalOpportunities: parseNumber(webhookData.total_opportunities),
-        totalOpportunityValue: parseNumber(webhookData.total_opportunity_value),
-        totalInterested: parseNumber(webhookData.total_interested || webhookData.reply_count),
-      });
-
-      return;
+      updateMetricsFromWebhook(webhookData);
     }
-
-    const simulatedData = await simulateWebhookData(clientKey);
-    setMetricsData(simulatedData);
   };
 
   const quickActions = [
@@ -209,7 +218,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
               opportunities={metricsData.totalOpportunities}
               opportunityValue={metricsData.totalOpportunityValue}
               leads={metricsData.newLeadsContactedCount}
-              interested={metricsData.totalInterested}
+              interested={metricsData.totalOpportunities}
             />
           </div>
         </div>

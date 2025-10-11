@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Mail, UserPlus, Target, DollarSign, MessageSquare, Users, RefreshCw, AlertCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Mail, UserPlus, Target, DollarSign, MessageSquare, RefreshCw, AlertCircle } from 'lucide-react';
 import { formatNumber, formatCurrency } from '../utils/numberFormatter';
 
 export interface MetricData {
@@ -71,15 +71,6 @@ export function DashboardMetrics({ clientKey, metrics, onRefresh, isRefreshing, 
       textColor: 'text-emerald-600',
       bgLight: 'bg-emerald-50',
       description: `Avg: ${formatCurrency(Number(avgOpportunityValue), 'compact')}`,
-    },
-    {
-      label: 'Interested Leads',
-      value: formatNumber(metrics.totalInterested, 'full'),
-      icon: Users,
-      color: 'bg-cyan-500',
-      textColor: 'text-cyan-600',
-      bgLight: 'bg-cyan-50',
-      description: `${engagementRate}% engagement`,
     },
   ];
 
