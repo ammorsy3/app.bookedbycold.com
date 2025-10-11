@@ -148,23 +148,26 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     }
   };
 
-  const handleRefresh = async () => {
+  const handleRefresh = async (shouldTriggerWebhook: boolean = false) => {
     const clientConfig = await getClientConfig(clientKey);
-    
+
     // Check if webhook is enabled and configured
     if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
       const webhookUrl = clientConfig.integrations.webhook.url;
-      
-      await triggerWebhook(webhookUrl);
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
+      // Only trigger webhook if explicitly requested (from date change)
+      if (shouldTriggerWebhook) {
+        await triggerWebhook(webhookUrl);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
       const webhookData = await fetchWebhookData(webhookUrl);
-      
+
       if (webhookData) {
         updateMetricsFromWebhook(webhookData);
         return;
       }
-      
+
       console.log('Webhook returned invalid data, falling back to simulated data');
     } else {
       console.log('Webhook not configured, using simulated data');
@@ -210,7 +213,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     setEndDate(end);
 
     if (start && end) {
-      handleRefresh();
+      handleRefresh(true);
     }
   };
 
