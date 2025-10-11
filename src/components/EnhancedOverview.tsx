@@ -43,30 +43,42 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       });
 
       if (!response.ok) {
-        console.error('Webhook request failed:', response.status);
+        console.error('Webhook request failed with status:', response.status);
         return null;
       }
 
       const text = await response.text();
-      
+
+      if (!text || text.trim().length === 0) {
+        console.warn('Webhook returned empty response');
+        return null;
+      }
+
       // Check if response is valid JSON
       let data;
       try {
         data = JSON.parse(text);
       } catch (jsonError) {
-        console.error('Webhook response is not valid JSON:', text);
+        console.warn('Webhook response is not JSON. Response:', text.substring(0, 100));
+        console.warn('This usually means the webhook endpoint needs to return JSON data with the required fields.');
         return null;
       }
-      
-      console.log('Raw webhook response:', data);
-      console.log('Field types:', {
-        reply_count: typeof data.reply_count,
-        emails_sent_count: typeof data.emails_sent_count,
-        new_leads_contacted_count: typeof data.new_leads_contacted_count,
-        total_opportunities: typeof data.total_opportunities,
-        total_opportunity_value: typeof data.total_opportunity_value,
-        total_interested: typeof data.total_interested,
+
+      // Validate that we have at least some expected fields
+      if (!data || typeof data !== 'object') {
+        console.warn('Webhook returned invalid data structure');
+        return null;
+      }
+
+      console.log('Webhook data received successfully:', {
+        reply_count: data.reply_count,
+        emails_sent_count: data.emails_sent_count,
+        new_leads_contacted_count: data.new_leads_contacted_count,
+        total_opportunities: data.total_opportunities,
+        total_opportunity_value: data.total_opportunity_value,
+        total_interested: data.total_interested,
       });
+
       return data;
     } catch (error) {
       console.error('Webhook fetch error:', error);
@@ -133,9 +145,9 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         return;
       }
       
-      console.log('Webhook failed, falling back to simulated data');
+      console.log('Webhook returned invalid data, falling back to simulated data');
     } else {
-      console.log('Webhook disabled, using simulated data');
+      console.log('Webhook not configured, using simulated data');
     }
 
     // Fallback to simulated data
@@ -159,9 +171,9 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
           return;
         }
         
-        console.log('Webhook failed on initial load, falling back to simulated data');
+        console.log('Webhook returned invalid data on initial load, falling back to simulated data');
       } else {
-        console.log('Webhook disabled, using simulated data for initial load');
+        console.log('Webhook not configured, using simulated data for initial load');
       }
       
       // Fallback to simulated data
