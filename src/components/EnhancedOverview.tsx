@@ -14,13 +14,13 @@ interface EnhancedOverviewProps {
 }
 
 interface WebhookResponse {
-  reply_count?: number;
-  reply_count_unique?: number;
-  emails_sent_count?: number;
-  new_leads_contacted_count?: number;
-  total_opportunities?: number;
-  total_opportunity_value?: number;
-  total_interested?: number;
+  reply_count?: string | number;
+  reply_count_unique?: string | number;
+  emails_sent_count?: string | number;
+  new_leads_contacted_count?: string | number;
+  total_opportunities?: string | number;
+  total_opportunity_value?: string | number;
+  total_interested?: string | number;
 }
 
 export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
@@ -48,6 +48,15 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       }
 
       const data = await response.json();
+      console.log('Raw webhook response:', data);
+      console.log('Field types:', {
+        reply_count: typeof data.reply_count,
+        emails_sent_count: typeof data.emails_sent_count,
+        new_leads_contacted_count: typeof data.new_leads_contacted_count,
+        total_opportunities: typeof data.total_opportunities,
+        total_opportunity_value: typeof data.total_opportunity_value,
+        total_interested: typeof data.total_interested,
+      });
       return data;
     } catch (error) {
       console.error('Webhook fetch error:', error);
@@ -84,14 +93,31 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     const webhookData = await fetchWebhookData(webhookUrl);
 
     if (webhookData) {
+      // Convert all values to numbers (handles both string and number inputs)
+      const parseNumber = (value: any): number => {
+        if (value === null || value === undefined || value === '') return 0;
+        const parsed = typeof value === 'string' ? parseInt(value, 10) : Number(value);
+        return isNaN(parsed) ? 0 : parsed;
+      };
+
       setMetricsData({
-        replyCount: webhookData.reply_count || webhookData.reply_count_unique || 0,
-        emailsSentCount: webhookData.emails_sent_count || 0,
-        newLeadsContactedCount: webhookData.new_leads_contacted_count || 0,
-        totalOpportunities: webhookData.total_opportunities || 0,
-        totalOpportunityValue: webhookData.total_opportunity_value || 0,
-        totalInterested: webhookData.total_interested || 0,
+        replyCount: parseNumber(webhookData.reply_count || webhookData.reply_count_unique),
+        emailsSentCount: parseNumber(webhookData.emails_sent_count),
+        newLeadsContactedCount: parseNumber(webhookData.new_leads_contacted_count),
+        totalOpportunities: parseNumber(webhookData.total_opportunities),
+        totalOpportunityValue: parseNumber(webhookData.total_opportunity_value),
+        totalInterested: parseNumber(webhookData.total_interested || webhookData.reply_count),
       });
+
+      console.log('Dashboard updated with webhook data:', {
+        replyCount: parseNumber(webhookData.reply_count),
+        emailsSentCount: parseNumber(webhookData.emails_sent_count),
+        newLeadsContactedCount: parseNumber(webhookData.new_leads_contacted_count),
+        totalOpportunities: parseNumber(webhookData.total_opportunities),
+        totalOpportunityValue: parseNumber(webhookData.total_opportunity_value),
+        totalInterested: parseNumber(webhookData.total_interested || webhookData.reply_count),
+      });
+
       return;
     }
 

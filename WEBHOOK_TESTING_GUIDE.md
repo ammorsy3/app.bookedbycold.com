@@ -95,10 +95,23 @@ Your Make.com scenario should:
 
 ## Expected JSON Response
 
+The webhook can return values as either **strings** or **numbers**. Both formats are supported:
+
+### Example Response (Strings):
+```json
+{
+  "reply_count": "9",
+  "emails_sent_count": "2667",
+  "new_leads_contacted_count": "906",
+  "total_opportunities": "3",
+  "total_opportunity_value": "6750"
+}
+```
+
+### Example Response (Numbers):
 ```json
 {
   "reply_count": 252,
-  "reply_count_unique": 252,
   "emails_sent_count": 29209,
   "new_leads_contacted_count": 10730,
   "total_opportunities": 85,
@@ -107,18 +120,49 @@ Your Make.com scenario should:
 }
 ```
 
-All fields are **required**. Missing fields will default to 0.
+**Notes:**
+- `total_interested` is optional. If missing, it defaults to `reply_count` value
+- All other missing fields default to 0
+- String values are automatically converted to numbers
+- Non-numeric strings default to 0
 
 ## Dashboard Formatting Applied
+
+### Example with Your Webhook Data:
+
+**Input:**
+```json
+{
+  "reply_count": "9",
+  "emails_sent_count": "2667",
+  "new_leads_contacted_count": "906",
+  "total_opportunities": "3",
+  "total_opportunity_value": "6750"
+}
+```
+
+**Formatted Output:**
+
+| Field | Raw Value | Parsed | Formatted | Rule |
+|-------|-----------|--------|-----------|------|
+| reply_count | "9" | 9 | "9" | < 1K = as-is |
+| emails_sent_count | "2667" | 2,667 | "2,667" | 1K-9.9K = comma |
+| new_leads_contacted_count | "906" | 906 | "906" | < 1K = as-is |
+| total_opportunities | "3" | 3 | "3" | < 1K = as-is |
+| total_opportunity_value | "6750" | 6,750 | "$6,750" | 1K-9.9K = comma |
+| total_interested | (missing) | 9 | "9" | Defaults to reply_count |
+
+### Other Examples:
 
 | Raw Value | Formatted | Rule |
 |-----------|-----------|------|
 | 252 | "252" | < 1K = as-is |
+| 2,667 | "2,667" | 1K-9.9K = comma |
 | 29,209 | "29K" | 10K-99K = compact |
 | 10,730 | "11K" | 10K-99K = compact (rounded) |
 | 85 | "85" | < 1K = as-is |
+| 6,750 | "$6,750" | 1K-9.9K = comma |
 | 188,500 | "$189K" | 100K+ = currency K |
-| 87 | "87" | < 1K = as-is |
 
 ## Troubleshooting
 
