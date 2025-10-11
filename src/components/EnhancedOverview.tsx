@@ -5,6 +5,7 @@ import { DashboardMetrics } from './DashboardMetrics';
 import { PerformanceCharts } from './PerformanceCharts';
 import { AutomatedInsights } from './AutomatedInsights';
 import { RefreshButton } from './RefreshButton';
+import { DateRangePicker } from './DateRangePicker';
 import { simulateWebhookData } from '../utils/webhookSimulator';
 import { getClientConfig } from '../clients';
 import { formatCurrency, formatNumber } from '../utils/numberFormatter';
@@ -32,6 +33,16 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     totalOpportunityValue: 0,
     totalInterested: 0,
   });
+
+  const [startDate, setStartDate] = useState<Date | null>(new Date('2025-08-06'));
+  const [endDate, setEndDate] = useState<Date | null>(new Date());
+
+  const formatDateForWebhook = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   const fetchWebhookData = async (webhookUrl: string): Promise<WebhookResponse | null> => {
     try {
@@ -111,16 +122,25 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
   const triggerWebhook = async (webhookUrl: string): Promise<void> => {
     try {
+      const payload: any = {
+        action: 'refresh_dashboard',
+        client_key: clientKey,
+        timestamp: new Date().toISOString(),
+      };
+
+      if (startDate && endDate) {
+        payload.startDate = formatDateForWebhook(startDate);
+        payload.endDate = formatDateForWebhook(endDate);
+      }
+
+      console.log('Sending webhook trigger with payload:', payload);
+
       await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          action: 'refresh_dashboard',
-          client_key: clientKey,
-          timestamp: new Date().toISOString(),
-        }),
+        body: JSON.stringify(payload),
       });
       console.log('Webhook trigger sent successfully');
     } catch (error) {
@@ -184,6 +204,18 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     loadInitialData();
   }, [clientKey]);
 
+  useEffect(() => {
+    if (startDate && endDate) {
+      handleRefresh();
+    }
+  }, [startDate, endDate]);
+
+  const handleDateChange = (dates: [Date | null, Date | null]) => {
+    const [start, end] = dates;
+    setStartDate(start);
+    setEndDate(end);
+  };
+
   const quickActions = [
     {
       title: 'CRM Dashboard',
@@ -237,6 +269,26 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
           <p className="text-gray-600">Real-time metrics and automated insights for data-driven decisions</p>
         </div>
         <RefreshButton onRefresh={handleRefresh} cooldownSeconds={15} />
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+        <div className="flex items-center gap-6">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Analytics Period
+            </label>
+            <DateRangePicker
+              startDate={startDate}
+              endDate={endDate}
+              onChange={handleDateChange}
+              placeholderText="Select date range for analytics"
+            />
+          </div>
+          <div className="text-sm text-gray-500 mt-7">
+            <p>Campaign started: 6 Aug 2025</p>
+            <p>Viewing: {startDate && endDate ? `${formatDateForWebhook(startDate)} to ${formatDateForWebhook(endDate)}` : 'All time'}</p>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-8">
