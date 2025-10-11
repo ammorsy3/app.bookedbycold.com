@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Mail, UserPlus, Target, DollarSign, MessageSquare, Users, RefreshCw, AlertCircle } from 'lucide-react';
+import { formatNumber, formatCurrency } from '../utils/numberFormatter';
 
 export interface MetricData {
   replyCount: number;
@@ -13,22 +14,13 @@ export interface MetricData {
 
 interface DashboardMetricsProps {
   clientKey: string;
+  metrics: MetricData;
   onRefresh?: () => void;
   isRefreshing?: boolean;
   nextRefreshTime?: number;
 }
 
-export function DashboardMetrics({ clientKey, onRefresh, isRefreshing, nextRefreshTime }: DashboardMetricsProps) {
-  const [metrics, setMetrics] = useState<MetricData>({
-    replyCount: 252,
-    emailsSentCount: 29209,
-    newLeadsContactedCount: 10730,
-    totalOpportunities: 85,
-    totalOpportunityValue: 188500,
-    totalInterested: 87,
-    lastUpdated: new Date().toISOString(),
-  });
-
+export function DashboardMetrics({ clientKey, metrics, onRefresh, isRefreshing, nextRefreshTime }: DashboardMetricsProps) {
   const responseRate = ((metrics.replyCount / metrics.newLeadsContactedCount) * 100).toFixed(2);
   const opportunityRate = ((metrics.totalOpportunities / metrics.newLeadsContactedCount) * 100).toFixed(2);
   const avgOpportunityValue = (metrics.totalOpportunityValue / metrics.totalOpportunities).toFixed(0);
@@ -37,7 +29,7 @@ export function DashboardMetrics({ clientKey, onRefresh, isRefreshing, nextRefre
   const primaryMetrics = [
     {
       label: 'Total Emails Sent',
-      value: metrics.emailsSentCount.toLocaleString(),
+      value: formatNumber(metrics.emailsSentCount, 'compact'),
       icon: Mail,
       color: 'bg-blue-500',
       textColor: 'text-blue-600',
@@ -46,7 +38,7 @@ export function DashboardMetrics({ clientKey, onRefresh, isRefreshing, nextRefre
     },
     {
       label: 'Replies Received',
-      value: metrics.replyCount.toLocaleString(),
+      value: formatNumber(metrics.replyCount, 'full'),
       icon: MessageSquare,
       color: 'bg-green-500',
       textColor: 'text-green-600',
@@ -55,7 +47,7 @@ export function DashboardMetrics({ clientKey, onRefresh, isRefreshing, nextRefre
     },
     {
       label: 'New Leads Contacted',
-      value: metrics.newLeadsContactedCount.toLocaleString(),
+      value: formatNumber(metrics.newLeadsContactedCount, 'compact'),
       icon: UserPlus,
       color: 'bg-purple-500',
       textColor: 'text-purple-600',
@@ -64,7 +56,7 @@ export function DashboardMetrics({ clientKey, onRefresh, isRefreshing, nextRefre
     },
     {
       label: 'Total Opportunities',
-      value: metrics.totalOpportunities.toLocaleString(),
+      value: formatNumber(metrics.totalOpportunities, 'full'),
       icon: Target,
       color: 'bg-orange-500',
       textColor: 'text-orange-600',
@@ -73,16 +65,16 @@ export function DashboardMetrics({ clientKey, onRefresh, isRefreshing, nextRefre
     },
     {
       label: 'Opportunity Value',
-      value: `$${(metrics.totalOpportunityValue / 1000).toFixed(0)}K`,
+      value: formatCurrency(metrics.totalOpportunityValue, 'compact'),
       icon: DollarSign,
       color: 'bg-emerald-500',
       textColor: 'text-emerald-600',
       bgLight: 'bg-emerald-50',
-      description: `Avg: $${Number(avgOpportunityValue).toLocaleString()}`,
+      description: `Avg: ${formatCurrency(Number(avgOpportunityValue), 'compact')}`,
     },
     {
       label: 'Interested Leads',
-      value: metrics.totalInterested.toLocaleString(),
+      value: formatNumber(metrics.totalInterested, 'full'),
       icon: Users,
       color: 'bg-cyan-500',
       textColor: 'text-cyan-600',

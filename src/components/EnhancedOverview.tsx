@@ -6,9 +6,21 @@ import { PerformanceCharts } from './PerformanceCharts';
 import { AutomatedInsights } from './AutomatedInsights';
 import { RefreshButton } from './RefreshButton';
 import { simulateWebhookData } from '../utils/webhookSimulator';
+import { getClientConfig } from '../clients';
+import { formatCurrency, formatNumber } from '../utils/numberFormatter';
 
 interface EnhancedOverviewProps {
   clientKey: string;
+}
+
+interface WebhookResponse {
+  reply_count?: number;
+  reply_count_unique?: number;
+  emails_sent_count?: number;
+  new_leads_contacted_count?: number;
+  total_opportunities?: number;
+  total_opportunity_value?: number;
+  total_interested?: number;
 }
 
 export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
@@ -21,9 +33,49 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     totalInterested: 87,
   });
 
+  const fetchWebhookData = async (webhookUrl: string): Promise<WebhookResponse | null> => {
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Webhook request failed:', response.status);
+        return null;
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Webhook fetch error:', error);
+      return null;
+    }
+  };
+
   const handleRefresh = async () => {
-    const newData = await simulateWebhookData(clientKey);
-    setMetricsData(newData);
+    const config = await getClientConfig(clientKey);
+
+    if (config?.integrations.webhook?.enabled && config.integrations.webhook.url) {
+      const webhookData = await fetchWebhookData(config.integrations.webhook.url);
+
+      if (webhookData) {
+        setMetricsData({
+          replyCount: webhookData.reply_count || webhookData.reply_count_unique || 0,
+          emailsSentCount: webhookData.emails_sent_count || 0,
+          newLeadsContactedCount: webhookData.new_leads_contacted_count || 0,
+          totalOpportunities: webhookData.total_opportunities || 0,
+          totalOpportunityValue: webhookData.total_opportunity_value || 0,
+          totalInterested: webhookData.total_interested || 0,
+        });
+        return;
+      }
+    }
+
+    const simulatedData = await simulateWebhookData(clientKey);
+    setMetricsData(simulatedData);
   };
 
   const quickActions = [
@@ -82,7 +134,13 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       </div>
 
       <div className="space-y-8">
-        <DashboardMetrics clientKey={clientKey} />
+        <DashboardMetrics
+          clientKey={clientKey}
+          metrics={{
+            ...metricsData,
+            lastUpdated: new Date().toISOString()
+          }}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
@@ -117,9 +175,9 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
             <div className="flex-1">
               <h3 className="text-lg font-bold text-gray-900 mb-2">Campaign Impact Summary</h3>
               <p className="text-gray-700 mb-4">
-                Your campaign has reached <strong>{metricsData.newLeadsContactedCount.toLocaleString()} new leads</strong> with{' '}
-                <strong>{metricsData.emailsSentCount.toLocaleString()} emails sent</strong>. Generated{' '}
-                <strong>${(metricsData.totalOpportunityValue / 1000).toFixed(0)}K in pipeline value</strong> from{' '}
+                Your campaign has reached <strong>{formatNumber(metricsData.newLeadsContactedCount, 'compact')} new leads</strong> with{' '}
+                <strong>{formatNumber(metricsData.emailsSentCount, 'compact')} emails sent</strong>. Generated{' '}
+                <strong>{formatCurrency(metricsData.totalOpportunityValue, 'compact')} in pipeline value</strong> from{' '}
                 <strong>{metricsData.totalOpportunities} qualified opportunities</strong>. Response rate of{' '}
                 <strong>{((metricsData.replyCount / metricsData.newLeadsContactedCount) * 100).toFixed(2)}%</strong> demonstrates strong market engagement.
               </p>
