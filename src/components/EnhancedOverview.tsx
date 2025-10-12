@@ -6,7 +6,7 @@ import { PerformanceCharts } from './PerformanceCharts';
 import { AutomatedInsights } from './AutomatedInsights';
 import { RefreshButton } from './RefreshButton';
 import { DateRangePicker } from './DateRangePicker';
-import { supabase } from '../lib/supabase';
+import { simulateWebhookData } from '../utils/webhookSimulator';
 import { getClientConfig } from '../clients';
 import { formatCurrency, formatNumber } from '../utils/numberFormatter';
 
@@ -25,18 +25,7 @@ interface DailyAnalytics {
   unique_clicks: number;
 }
 
-interface OverallCampaignAnalytics {
-  total_reply_count: string | number;
-  total_emails_sent_count: string | number;
-  total_new_leads_contacted_count: string | number;
-  total_opportunities: string | number;
-  total_opportunity_value: string | number;
-}
-
-interface WebhookResponse {
-  overAllCampaignAnalytics: OverallCampaignAnalytics;
-  dailyCampaignAnalytics: string;
-}
+type WebhookResponse = DailyAnalytics[];
 
 export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   const [metricsData, setMetricsData] = useState({
@@ -89,15 +78,16 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         return null;
       }
 
-      // Validate that we have overAllCampaignAnalytics
-      if (!data || !data.overAllCampaignAnalytics) {
-        console.warn('Webhook returned invalid data structure: expected overAllCampaignAnalytics');
+      // Validate that we have array of daily analytics
+      if (!Array.isArray(data)) {
+        console.warn('Webhook returned invalid data structure: expected array');
         return null;
       }
 
       console.log('Webhook data received successfully:', {
-        overallAnalytics: data.overAllCampaignAnalytics,
-        hasDailyData: !!data.dailyCampaignAnalytics,
+        totalDays: data.length,
+        dateRange: data.length > 0 ? `${data[0].date} to ${data[data.length - 1].date}` : 'N/A',
+        sampleDay: data[0],
       });
 
       return data;
@@ -107,50 +97,43 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     }
   };
 
-  // Parse and update metrics from webhook data (overall campaign analytics)
+  // Parse and update metrics from webhook data (array of daily analytics)
   const updateMetricsFromWebhook = (webhookData: WebhookResponse) => {
-    console.log('updateMetricsFromWebhook called with:', webhookData);
-
-    if (!webhookData || !webhookData.overAllCampaignAnalytics) {
-      console.warn('Invalid webhook data format: expected overAllCampaignAnalytics', webhookData);
+    if (!Array.isArray(webhookData) || webhookData.length === 0) {
+      console.warn('Invalid webhook data format: expected array of daily analytics');
       return;
     }
 
-    const overall = webhookData.overAllCampaignAnalytics;
-    console.log('Overall campaign analytics:', overall);
-
-    // Convert all values to numbers (handles both string and number inputs)
-    const parseNumber = (value: any): number => {
-      if (value === null || value === undefined || value === '') return 0;
-      const parsed = typeof value === 'string' ? parseInt(value, 10) : Number(value);
-      return isNaN(parsed) ? 0 : parsed;
-    };
+    // Calculate totals by summing all daily values
+    const totals = webhookData.reduce(
+      (acc, day) => ({
+        sent: acc.sent + (day.sent || 0),
+        replies: acc.replies + (day.replies || 0),
+        unique_replies: acc.unique_replies + (day.unique_replies || 0),
+        opened: acc.opened + (day.opened || 0),
+        unique_opened: acc.unique_opened + (day.unique_opened || 0),
+        clicks: acc.clicks + (day.clicks || 0),
+        unique_clicks: acc.unique_clicks + (day.unique_clicks || 0),
+      }),
+      { sent: 0, replies: 0, unique_replies: 0, opened: 0, unique_opened: 0, clicks: 0, unique_clicks: 0 }
+    );
 
     const newMetrics = {
-      replyCount: parseNumber(overall.total_reply_count),
-      emailsSentCount: parseNumber(overall.total_emails_sent_count),
-      newLeadsContactedCount: parseNumber(overall.total_new_leads_contacted_count),
-      totalOpportunities: parseNumber(overall.total_opportunities),
-      totalOpportunityValue: parseNumber(overall.total_opportunity_value),
-      totalInterested: parseNumber(overall.total_opportunities),
+      replyCount: totals.unique_replies,
+      emailsSentCount: totals.sent,
+      newLeadsContactedCount: totals.unique_replies,
+      totalOpportunities: 0,
+      totalOpportunityValue: 0,
+      totalInterested: 0,
     };
-
-    console.log('Parsed metrics:', {
-      'total_reply_count': overall.total_reply_count,
-      'parsed replyCount': newMetrics.replyCount,
-      'total_emails_sent_count': overall.total_emails_sent_count,
-      'parsed emailsSentCount': newMetrics.emailsSentCount,
-      'total_new_leads_contacted_count': overall.total_new_leads_contacted_count,
-      'parsed newLeadsContactedCount': newMetrics.newLeadsContactedCount,
-      'total_opportunities': overall.total_opportunities,
-      'parsed totalOpportunities': newMetrics.totalOpportunities,
-      'total_opportunity_value': overall.total_opportunity_value,
-      'parsed totalOpportunityValue': newMetrics.totalOpportunityValue,
-    });
 
     setMetricsData(newMetrics);
 
-    console.log('Dashboard metrics state updated to:', newMetrics);
+    console.log('Dashboard updated with aggregated daily analytics:', {
+      dailyData: webhookData,
+      totals,
+      displayMetrics: newMetrics,
+    });
   };
 
   const triggerWebhook = async (webhookUrl: string): Promise<WebhookResponse | null> => {
@@ -204,73 +187,55 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     }
   };
 
-  // Fetch latest data from Supabase
-  const fetchLatestAnalytics = async () => {
-    try {
-      console.log('Fetching latest analytics from Supabase for client:', clientKey);
-
-      const { data, error } = await supabase
-        .from('campaign_analytics')
-        .select('*')
-        .eq('client_key', clientKey)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error fetching analytics:', error);
-        return null;
-      }
-
-      if (!data) {
-        console.log('No analytics data found for client:', clientKey);
-        return null;
-      }
-
-      console.log('Fetched analytics data:', data);
-      return data;
-    } catch (error) {
-      console.error('Error fetching analytics:', error);
-      return null;
-    }
-  };
-
-  // Update metrics from database row
-  const updateMetricsFromDatabase = (row: any) => {
-    if (!row) return;
-
-    const newMetrics = {
-      replyCount: row.total_reply_count || 0,
-      emailsSentCount: row.total_emails_sent_count || 0,
-      newLeadsContactedCount: row.total_new_leads_contacted_count || 0,
-      totalOpportunities: row.total_opportunities || 0,
-      totalOpportunityValue: row.total_opportunity_value || 0,
-      totalInterested: row.total_opportunities || 0,
-    };
-
-    console.log('Updating dashboard with database metrics:', newMetrics);
-    setMetricsData(newMetrics);
-  };
-
   const handleRefresh = async () => {
-    console.log('Refreshing dashboard data...');
-    const data = await fetchLatestAnalytics();
-    if (data) {
-      updateMetricsFromDatabase(data);
+    const clientConfig = await getClientConfig(clientKey);
+
+    // Check if webhook is enabled and configured
+    if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
+      const webhookUrl = clientConfig.integrations.webhook.url;
+
+      // Trigger webhook and get response in ONE call
+      const webhookData = await triggerWebhook(webhookUrl);
+
+      if (webhookData) {
+        updateMetricsFromWebhook(webhookData);
+        return;
+      }
+
+      console.log('Webhook returned invalid data, falling back to simulated data');
     } else {
-      console.log('No data available after refresh');
+      console.log('Webhook not configured, using simulated data');
     }
+
+    // Fallback to simulated data
+    const simulatedData = simulateWebhookData();
+    updateMetricsFromWebhook(simulatedData);
   };
 
   // Fetch initial data on mount
   useEffect(() => {
     const loadInitialData = async () => {
-      const data = await fetchLatestAnalytics();
-      if (data) {
-        updateMetricsFromDatabase(data);
+      const clientConfig = await getClientConfig(clientKey);
+      
+      // Check if webhook is enabled and configured
+      if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
+        console.log('Loading initial webhook data...');
+        const webhookData = await fetchWebhookData(clientConfig.integrations.webhook.url);
+
+        if (webhookData) {
+          console.log('Initial webhook data received, updating dashboard...');
+          updateMetricsFromWebhook(webhookData);
+          return;
+        }
+        
+        console.log('Webhook returned invalid data on initial load, falling back to simulated data');
       } else {
-        console.log('No data available, using default zeros');
+        console.log('Webhook not configured, using simulated data for initial load');
       }
+      
+      // Fallback to simulated data
+      const simulatedData = simulateWebhookData();
+      updateMetricsFromWebhook(simulatedData);
     };
 
     loadInitialData();
