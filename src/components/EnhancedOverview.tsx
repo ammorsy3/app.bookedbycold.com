@@ -6,14 +6,9 @@ import { PerformanceCharts } from './PerformanceCharts';
 import { AutomatedInsights } from './AutomatedInsights';
 import { RefreshButton } from './RefreshButton';
 import { DateRangePicker } from './DateRangePicker';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 import { getClientConfig } from '../clients';
 import { formatCurrency, formatNumber } from '../utils/numberFormatter';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
 
 interface EnhancedOverviewProps {
   clientKey: string;
