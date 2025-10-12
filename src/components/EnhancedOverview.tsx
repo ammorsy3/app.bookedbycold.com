@@ -44,35 +44,52 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     return `${year}-${month}-${day}`;
   };
 
+  const parseWebhookResponse = (payload: string): WebhookResponse | null => {
+    if (!payload) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(payload);
+
+      if (parsed && typeof parsed === 'object') {
+        return parsed as WebhookResponse;
+      }
+
+      console.warn('Webhook returned a non-object payload');
+      return null;
+    } catch (error) {
+      console.warn('Failed to parse webhook response as JSON:', {
+        error: (error as Error).message,
+        payloadSnippet: payload.slice(0, 200),
+      });
+
+      return null;
+    }
+  };
+
   const fetchWebhookData = async (webhookUrl: string): Promise<WebhookResponse | null> => {
     try {
-      console.log('Attempting to fetch webhook data from:', webhookUrl);
+      console.log('Attempting to fetch webhook data directly from:', webhookUrl);
 
-      const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhook-proxy`;
-
-      const response = await fetch(proxyUrl, {
-        method: 'POST',
+      const response = await fetch(webhookUrl, {
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          webhookUrl,
-          method: 'GET',
-        }),
       });
 
       if (!response.ok) {
-        console.error('Webhook proxy request failed with status:', response.status, response.statusText);
-        const errorText = await response.text();
+        const errorText = await response.text().catch(() => 'Unable to read error response');
+        console.error('Webhook request failed with status:', response.status, response.statusText);
         console.error('Error response:', errorText);
         return null;
       }
 
-      const data = await response.json();
+      const responseText = await response.text();
+      const data = parseWebhookResponse(responseText);
 
-      // Validate that we have at least some expected fields
-      if (!data || typeof data !== 'object') {
+      if (!data) {
         console.warn('Webhook returned invalid data structure');
         return null;
       }
@@ -89,10 +106,10 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       return data;
     } catch (error) {
       console.error('Webhook fetch error details:', {
-        error: error.message,
-        type: error.name,
-        stack: error.stack,
-        url: webhookUrl
+        error: (error as Error).message,
+        type: (error as Error).name,
+        stack: (error as Error).stack,
+        url: webhookUrl,
       });
 
       return null;
@@ -165,13 +182,11 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     // Parse webhook response as JSON
     const responseText = await response.text();
 
-    // Parse webhook response
-    let webhookData: WebhookResponse = {};
-    try {
-      webhookData = JSON.parse(responseText);
-    } catch (e) {
-      // If response is not JSON, treat it as plain text
-      webhookData = { response: responseText };
+    const webhookData = parseWebhookResponse(responseText);
+
+    if (!webhookData) {
+      console.warn('Webhook returned an unexpected payload. Falling back to simulated data.');
+      return null;
     }
 
     console.log('✅ Webhook data received successfully:', {
