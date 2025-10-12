@@ -116,7 +116,6 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
     { id: 'overview',  label: 'Overview',  icon: BarChart3, to: `/${clientKey}/overview` },
     { id: 'crm',       label: 'CRM',       icon: Database,  to: `/${clientKey}/crm` },
     { id: 'leads',     label: 'Leads',     icon: Target,    to: `/${clientKey}/leads` },
-    { id: 'campaigns', label: 'Campaigns', icon: Activity,  to: `/${clientKey}/campaigns` },
     { id: 'finance',   label: 'Finance',   icon: DollarSign,to: `/${clientKey}/finance` },
     { id: 'reports',   label: 'Reports',   icon: FileText,  to: `/${clientKey}/reports` },
   ];

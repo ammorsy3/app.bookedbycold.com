@@ -264,16 +264,20 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       title: 'CRM Dashboard',
       description: 'Access your complete customer relationship management system',
       icon: Database,
-      color: 'bg-blue-500',
+      iconBgColor: 'bg-blue-100',
+      iconColor: 'text-blue-600',
+      buttonColor: 'bg-blue-600 hover:bg-blue-700',
       stat: '31% of our calls are good fit!',
       link: '../crm',
-      external: 'https://airtable.com/appdepbMC8HjPr3D9/shrGOao87lyCG8yKN',
+      external: 'https://airtable.com/appdepbMC8HjPr3D9/shrUpnBjEZjhPLJST',
     },
     {
       title: 'Financial Overview',
       description: 'Monthly subscriptions, terms, and pricing details',
       icon: DollarSign,
-      color: 'bg-green-500',
+      iconBgColor: 'bg-green-100',
+      iconColor: 'text-green-600',
+      buttonColor: 'bg-green-600 hover:bg-green-700',
       stat: '$119.00 due today (LinkedIn Sales Navigator)',
       link: '../finance',
     },
@@ -281,26 +285,23 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       title: 'Leads Dashboard',
       description: 'Track and manage your lead-generation pipeline',
       icon: Target,
-      color: 'bg-purple-500',
+      iconBgColor: 'bg-purple-100',
+      iconColor: 'text-purple-600',
+      buttonColor: 'bg-purple-600 hover:bg-purple-700',
       stat: '49 new leads',
       link: '../leads',
-      external: 'https://airtable.com/invite/l?inviteId=invG6X8ERSPZ5Zpc6&inviteToken=e435074069a4e302858da4b37a8e6137c9ff8825aba261372dd4def71bf29808',
-    },
-    {
-      title: 'Campaign Analytics',
-      description: 'Monitor email campaigns and outreach performance',
-      icon: BarChart3,
-      color: 'bg-orange-500',
-      stat: '18.2K Emails Sent',
-      link: '../campaigns',
+      external: 'https://airtable.com/appdepbMC8HjPr3D9/tbl0j3sAHYjA9nJTs/viwDFuuaeUhGuloNX?blocks=hide',
     },
     {
       title: 'Monthly Reports',
       description: 'View and download detailed campaign PDFs',
       icon: FileText,
-      color: 'bg-slate-500',
+      iconBgColor: 'bg-slate-100',
+      iconColor: 'text-slate-600',
+      buttonColor: 'bg-slate-600 hover:bg-slate-700',
       stat: 'Latest file: Aug 2025',
       link: '../reports',
+      buttonText: 'Open',
     },
   ];
 
@@ -413,34 +414,46 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
         <div>
           <h3 className="text-xl font-bold text-gray-900 mb-4">Quick Access</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {quickActions.map((action) => (
-              <Link
+              <div
                 key={action.title}
-                to={action.link}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all group"
+                className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow relative"
               >
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={`${action.color} p-3 rounded-lg group-hover:scale-110 transition-transform`}>
-                      <action.icon className="w-6 h-6 text-white" />
-                    </div>
-                    {action.external && (
-                      <ExternalLink className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
-                    )}
+                <div className="flex items-start justify-between mb-4">
+                  <div className={`${action.iconBgColor} p-4 rounded-2xl`}>
+                    <action.icon className={`w-8 h-8 ${action.iconColor}`} />
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">{action.title}</h3>
-                  <p className="text-sm text-gray-600 mb-4">{action.description}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-gray-500 group-hover:text-gray-700">
-                      {action.stat}
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 group-hover:text-blue-700">
-                      Access →
-                    </span>
-                  </div>
+                  {action.external && (
+                    <ExternalLink className="w-5 h-5 text-gray-300" />
+                  )}
                 </div>
-              </Link>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">{action.title}</h3>
+                <p className="text-sm text-gray-600 mb-6">{action.description}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">
+                    {action.stat}
+                  </span>
+                  {action.external ? (
+                    <a
+                      href={action.external}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`inline-flex items-center gap-2 px-4 py-2 ${action.buttonColor} text-white rounded-lg font-medium transition-colors`}
+                    >
+                      {action.buttonText || 'Access'}
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  ) : (
+                    <Link
+                      to={action.link}
+                      className={`inline-flex items-center gap-2 px-4 py-2 ${action.buttonColor} text-white rounded-lg font-medium transition-colors`}
+                    >
+                      {action.buttonText || 'Access'} →
+                    </Link>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
         </div>
