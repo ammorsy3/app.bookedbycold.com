@@ -7,8 +7,9 @@ import { AutomatedInsights } from './AutomatedInsights';
 import { RefreshButton } from './RefreshButton';
 import { DateRangePicker } from './DateRangePicker';
 import { simulateWebhookData } from '../utils/webhookSimulator';
-import { getClientConfig } from '../clients';
 import { formatCurrency, formatNumber } from '../utils/numberFormatter';
+
+const DASHBOARD_WEBHOOK_URL = 'https://hook.us2.make.com/f36n7r86d2wd8xlq51pwqlbh4koagp8d';
 
 interface EnhancedOverviewProps {
   clientKey: string;
@@ -135,27 +136,18 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     console.log('🔄 Starting refresh process...');
     console.log('Current domain:', window.location.origin);
     
-    const clientConfig = await getClientConfig(clientKey);
+    console.log('🌐 Using hardcoded webhook URL:', DASHBOARD_WEBHOOK_URL);
 
-    // Check if webhook is enabled and configured
-    if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
-      const webhookUrl = clientConfig.integrations.webhook.url;
-      
-      console.log('🌐 Webhook configured:', webhookUrl);
+    // Trigger webhook data collection and fetch results
+    const webhookData = await triggerWebhook(DASHBOARD_WEBHOOK_URL);
 
-      // Trigger webhook data collection and fetch results
-      const webhookData = await triggerWebhook(webhookUrl);
-
-      if (webhookData) {
-        console.log('✅ Webhook data received, updating dashboard...');
-        updateMetricsFromWebhook(webhookData);
-        return;
-      }
-
-      console.warn('⚠️ Webhook failed or returned invalid data, falling back to simulated data');
-    } else {
-      console.log('ℹ️ Webhook not configured, using simulated data');
+    if (webhookData) {
+      console.log('✅ Webhook data received, updating dashboard...');
+      updateMetricsFromWebhook(webhookData);
+      return;
     }
+
+    console.warn('⚠️ Webhook failed or returned invalid data, falling back to simulated data');
 
     // Fallback to simulated data
     console.log('📊 Using simulated data for dashboard');
@@ -168,23 +160,16 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     const loadInitialData = async () => {
       console.log('🚀 Loading initial dashboard data...');
 
-      const clientConfig = await getClientConfig(clientKey);
+      console.log('🌐 Loading initial webhook data from hardcoded URL...');
+      const webhookData = await triggerWebhook(DASHBOARD_WEBHOOK_URL);
 
-      // Check if webhook is enabled and configured
-      if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
-        console.log('🌐 Loading initial webhook data...');
-        const webhookData = await triggerWebhook(clientConfig.integrations.webhook.url);
-
-        if (webhookData) {
-          console.log('✅ Initial webhook data received, updating dashboard...');
-          updateMetricsFromWebhook(webhookData);
-          return;
-        }
-        
-        console.log('⚠️ Webhook returned invalid data on initial load, falling back to simulated data');
-      } else {
-        console.log('ℹ️ Webhook not configured, using simulated data for initial load');
+      if (webhookData) {
+        console.log('✅ Initial webhook data received, updating dashboard...');
+        updateMetricsFromWebhook(webhookData);
+        return;
       }
+
+      console.log('⚠️ Webhook returned invalid data on initial load, falling back to simulated data');
       
       // Fallback to simulated data
       console.log('📊 Using simulated data for initial load');
