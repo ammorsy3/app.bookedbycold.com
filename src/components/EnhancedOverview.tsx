@@ -34,8 +34,6 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     totalInterested: 0,
   });
 
-  const [clientConfig, setClientConfig] = useState<any>(null);
-  const [webhookError, setWebhookError] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<Date | null>(new Date('2025-08-06'));
   const [endDate, setEndDate] = useState<Date | null>(new Date());
 
@@ -48,60 +46,53 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
   const fetchWebhookData = async (webhookUrl: string): Promise<WebhookResponse | null> => {
     try {
-      const payload: any = {
-        action: 'refresh_dashboard',
-        client_key: clientKey,
-        timestamp: new Date().toISOString(),
-      };
-
-      if (startDate && endDate) {
-        payload.startDate = formatDateForWebhook(startDate);
-        payload.endDate = formatDateForWebhook(endDate);
-      }
-
-      console.log('[Initial Load] Calling webhook:', webhookUrl);
-      console.log('[Initial Load] Payload:', payload);
-
       const response = await fetch(webhookUrl, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
       });
 
-      console.log('[Initial Load] Response status:', response.status);
-
       if (!response.ok) {
-        console.error('[Initial Load] Request failed with status:', response.status);
+        console.error('Webhook request failed with status:', response.status);
         return null;
       }
 
       const text = await response.text();
-      console.log('[Initial Load] Response text:', text.substring(0, 200));
 
       if (!text || text.trim().length === 0) {
-        console.warn('[Initial Load] Returned empty response');
+        console.warn('Webhook returned empty response');
         return null;
       }
 
+      // Check if response is valid JSON
       let data;
       try {
         data = JSON.parse(text);
       } catch (jsonError) {
-        console.warn('[Initial Load] Response is not JSON:', text.substring(0, 100));
+        console.warn('Webhook response is not JSON. Response:', text.substring(0, 100));
+        console.warn('This usually means the webhook endpoint needs to return JSON data with the required fields.');
         return null;
       }
 
+      // Validate that we have at least some expected fields
       if (!data || typeof data !== 'object') {
-        console.warn('[Initial Load] Invalid data structure');
+        console.warn('Webhook returned invalid data structure');
         return null;
       }
 
-      console.log('[Initial Load] Data received successfully:', data);
+      console.log('Webhook data received successfully:', {
+        reply_count: data.reply_count,
+        emails_sent_count: data.emails_sent_count,
+        new_leads_contacted_count: data.new_leads_contacted_count,
+        total_opportunities: data.total_opportunities,
+        total_opportunity_value: data.total_opportunity_value,
+        total_interested: data.total_interested,
+      });
+
       return data;
     } catch (error) {
-      console.error('[Initial Load] Error:', error);
+      console.error('Webhook fetch error:', error);
       return null;
     }
   };
@@ -142,8 +133,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         payload.endDate = formatDateForWebhook(endDate);
       }
 
-      console.log('[Webhook] Sending POST request to:', webhookUrl);
-      console.log('[Webhook] Payload:', payload);
+      console.log('Sending webhook trigger with payload:', payload);
 
       const response = await fetch(webhookUrl, {
         method: 'POST',
@@ -153,79 +143,55 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         body: JSON.stringify(payload),
       });
 
-      console.log('[Webhook] Response status:', response.status);
-      console.log('[Webhook] Response ok:', response.ok);
+      console.log('Webhook trigger sent successfully');
 
       if (!response.ok) {
-        console.error('[Webhook] Request failed with status:', response.status);
-        const errorText = await response.text();
-        console.error('[Webhook] Error response:', errorText);
+        console.error('Webhook request failed with status:', response.status);
         return null;
       }
 
       const text = await response.text();
-      console.log('[Webhook] Response text length:', text.length);
-      console.log('[Webhook] Response text:', text.substring(0, 200));
 
       if (!text || text.trim().length === 0) {
-        console.warn('[Webhook] Returned empty response');
+        console.warn('Webhook returned empty response');
         return null;
       }
 
       try {
         const data = JSON.parse(text);
-        console.log('[Webhook] Parsed response:', data);
+        console.log('Webhook response received:', data);
         return data;
       } catch (parseError) {
-        console.error('[Webhook] Failed to parse response:', parseError);
-        console.error('[Webhook] Raw text:', text);
+        console.error('Failed to parse webhook response:', parseError);
         return null;
       }
     } catch (error) {
-      console.error('[Webhook] Network or fetch error:', error);
-      if (error instanceof Error) {
-        console.error('[Webhook] Error message:', error.message);
-        console.error('[Webhook] Error stack:', error.stack);
-      }
+      console.error('Webhook trigger error:', error);
       return null;
     }
   };
 
   const handleRefresh = async () => {
-    console.log('[Refresh] Starting refresh process...');
-    console.log('[Refresh] Client key:', clientKey);
-    setWebhookError(null);
-
-    const config = await getClientConfig(clientKey);
-    console.log('[Refresh] Client config loaded:', config?.key);
-    console.log('[Refresh] Webhook enabled:', config?.integrations?.webhook?.enabled);
-    console.log('[Refresh] Webhook URL:', config?.integrations?.webhook?.url);
+    const clientConfig = await getClientConfig(clientKey);
 
     // Check if webhook is enabled and configured
-    if (config?.integrations?.webhook?.enabled && config?.integrations?.webhook?.url) {
-      const webhookUrl = config.integrations.webhook.url;
-      console.log('[Refresh] Calling webhook:', webhookUrl);
+    if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
+      const webhookUrl = clientConfig.integrations.webhook.url;
 
       // Trigger webhook and get response in ONE call
       const webhookData = await triggerWebhook(webhookUrl);
-      console.log('[Refresh] Webhook response:', webhookData);
 
       if (webhookData) {
-        console.log('[Refresh] Updating metrics with webhook data');
         updateMetricsFromWebhook(webhookData);
-        setWebhookError(null);
         return;
       }
 
-      console.warn('[Refresh] Webhook returned invalid data, falling back to simulated data');
-      setWebhookError('Webhook returned invalid data. Using simulated data.');
+      console.log('Webhook returned invalid data, falling back to simulated data');
     } else {
-      console.warn('[Refresh] Webhook not configured, using simulated data');
-      setWebhookError('Webhook not configured. Using simulated data.');
+      console.log('Webhook not configured, using simulated data');
     }
 
     // Fallback to simulated data
-    console.log('[Refresh] Using simulated data');
     const simulatedData = simulateWebhookData();
     updateMetricsFromWebhook(simulatedData);
   };
@@ -233,25 +199,24 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   // Fetch initial data on mount
   useEffect(() => {
     const loadInitialData = async () => {
-      const config = await getClientConfig(clientKey);
-      setClientConfig(config);
-
+      const clientConfig = await getClientConfig(clientKey);
+      
       // Check if webhook is enabled and configured
-      if (config?.integrations?.webhook?.enabled && config?.integrations?.webhook?.url) {
+      if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
         console.log('Loading initial webhook data...');
-        const webhookData = await fetchWebhookData(config.integrations.webhook.url);
+        const webhookData = await fetchWebhookData(clientConfig.integrations.webhook.url);
 
         if (webhookData) {
           console.log('Initial webhook data received, updating dashboard...');
           updateMetricsFromWebhook(webhookData);
           return;
         }
-
+        
         console.log('Webhook returned invalid data on initial load, falling back to simulated data');
       } else {
         console.log('Webhook not configured, using simulated data for initial load');
       }
-
+      
       // Fallback to simulated data
       const simulatedData = simulateWebhookData();
       updateMetricsFromWebhook(simulatedData);
@@ -294,19 +259,51 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     setEndDate(end);
   };
 
-  // Icon mapping for string-based icon names from config
-  const iconMap: { [key: string]: any } = {
-    Database,
-    DollarSign,
-    Target,
-    BarChart3,
-    FileText,
-  };
-
-  const quickActions = clientConfig?.quickActions?.map((action: any) => ({
-    ...action,
-    icon: iconMap[action.icon] || Database,
-  })) || [];
+  const quickActions = [
+    {
+      title: 'CRM Dashboard',
+      description: 'Access your complete customer relationship management system',
+      icon: Database,
+      iconBgColor: 'bg-blue-100',
+      iconColor: 'text-blue-600',
+      buttonColor: 'bg-blue-600 hover:bg-blue-700',
+      stat: '31% of our calls are good fit!',
+      link: '../crm',
+      external: 'https://airtable.com/appdepbMC8HjPr3D9/shrUpnBjEZjhPLJST',
+    },
+    {
+      title: 'Financial Overview',
+      description: 'Monthly subscriptions, terms, and pricing details',
+      icon: DollarSign,
+      iconBgColor: 'bg-green-100',
+      iconColor: 'text-green-600',
+      buttonColor: 'bg-green-600 hover:bg-green-700',
+      stat: '$119.00 due today (LinkedIn Sales Navigator)',
+      link: '../finance',
+    },
+    {
+      title: 'Leads Dashboard',
+      description: 'Track and manage your lead-generation pipeline',
+      icon: Target,
+      iconBgColor: 'bg-purple-100',
+      iconColor: 'text-purple-600',
+      buttonColor: 'bg-purple-600 hover:bg-purple-700',
+      stat: '49 new leads',
+      link: '../leads',
+      external: 'https://airtable.com/appdepbMC8HjPr3D9/tbl0j3sAHYjA9nJTs/viwDFuuaeUhGuloNX?blocks=hide',
+    },
+    {
+      title: 'Monthly Reports',
+      description: 'View and download detailed campaign PDFs',
+      icon: FileText,
+      iconBgColor: 'bg-slate-100',
+      iconColor: 'text-slate-600',
+      buttonColor: 'bg-slate-600 hover:bg-slate-700',
+      stat: 'Latest file: Aug 2025',
+      link: '../reports',
+      buttonText: 'Open',
+    },
+  ];
 
   return (
     <main className="max-w-7xl mx-auto px-6 py-8">
@@ -317,19 +314,6 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         </div>
         <RefreshButton onRefresh={handleRefresh} cooldownSeconds={15} />
       </div>
-
-      {webhookError && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-          <div className="flex items-start gap-3">
-            <div className="text-yellow-600 mt-0.5">⚠️</div>
-            <div className="flex-1">
-              <h3 className="text-sm font-semibold text-yellow-900 mb-1">Webhook Issue</h3>
-              <p className="text-sm text-yellow-800">{webhookError}</p>
-              <p className="text-xs text-yellow-700 mt-2">Check the browser console for detailed logs.</p>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
         <div className="flex items-center gap-6">
