@@ -48,53 +48,60 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
   const fetchWebhookData = async (webhookUrl: string): Promise<WebhookResponse | null> => {
     try {
+      const payload: any = {
+        action: 'refresh_dashboard',
+        client_key: clientKey,
+        timestamp: new Date().toISOString(),
+      };
+
+      if (startDate && endDate) {
+        payload.startDate = formatDateForWebhook(startDate);
+        payload.endDate = formatDateForWebhook(endDate);
+      }
+
+      console.log('[Initial Load] Calling webhook:', webhookUrl);
+      console.log('[Initial Load] Payload:', payload);
+
       const response = await fetch(webhookUrl, {
-        method: 'GET',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify(payload),
       });
 
+      console.log('[Initial Load] Response status:', response.status);
+
       if (!response.ok) {
-        console.error('Webhook request failed with status:', response.status);
+        console.error('[Initial Load] Request failed with status:', response.status);
         return null;
       }
 
       const text = await response.text();
+      console.log('[Initial Load] Response text:', text.substring(0, 200));
 
       if (!text || text.trim().length === 0) {
-        console.warn('Webhook returned empty response');
+        console.warn('[Initial Load] Returned empty response');
         return null;
       }
 
-      // Check if response is valid JSON
       let data;
       try {
         data = JSON.parse(text);
       } catch (jsonError) {
-        console.warn('Webhook response is not JSON. Response:', text.substring(0, 100));
-        console.warn('This usually means the webhook endpoint needs to return JSON data with the required fields.');
+        console.warn('[Initial Load] Response is not JSON:', text.substring(0, 100));
         return null;
       }
 
-      // Validate that we have at least some expected fields
       if (!data || typeof data !== 'object') {
-        console.warn('Webhook returned invalid data structure');
+        console.warn('[Initial Load] Invalid data structure');
         return null;
       }
 
-      console.log('Webhook data received successfully:', {
-        reply_count: data.reply_count,
-        emails_sent_count: data.emails_sent_count,
-        new_leads_contacted_count: data.new_leads_contacted_count,
-        total_opportunities: data.total_opportunities,
-        total_opportunity_value: data.total_opportunity_value,
-        total_interested: data.total_interested,
-      });
-
+      console.log('[Initial Load] Data received successfully:', data);
       return data;
     } catch (error) {
-      console.error('Webhook fetch error:', error);
+      console.error('[Initial Load] Error:', error);
       return null;
     }
   };
