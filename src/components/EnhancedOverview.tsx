@@ -123,67 +123,67 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   };
 
   const triggerWebhook = async (webhookUrl: string): Promise<WebhookResponse | null> => {
+    // Build payload to send to Make.com webhook
+    const webhookPayload: any = {
+      action: 'refresh_dashboard',
+      client_key: clientKey,
+      timestamp: new Date().toISOString(),
+      origin: window.location.origin,
+    };
+
+    if (startDate && endDate) {
+      webhookPayload.startDate = formatDateForWebhook(startDate);
+      webhookPayload.endDate = formatDateForWebhook(endDate);
+    }
+
+    console.log('🔄 Triggering webhook:', webhookUrl);
+    console.log('📦 Payload:', webhookPayload);
+
+    // Send to webhook
+    let response;
     try {
-      // Build payload to send to Make.com webhook
-      const payload: any = {
-        action: 'refresh_dashboard',
-        client_key: clientKey,
-        timestamp: new Date().toISOString(),
-        origin: window.location.origin,
-      };
-
-      if (startDate && endDate) {
-        payload.startDate = formatDateForWebhook(startDate);
-        payload.endDate = formatDateForWebhook(endDate);
-      }
-
-      console.log('🔄 Triggering webhook directly:', webhookUrl);
-      console.log('📦 Payload:', payload);
-
-      // Send POST request directly to the Make.com webhook
-      const response = await fetch(webhookUrl, {
+      response = await fetch(webhookUrl, {
         method: 'POST',
+        mode: 'cors',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(webhookPayload)
       });
-
-      if (!response.ok) {
-        console.error('❌ Webhook trigger failed with status:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
-        return null;
-      }
-
-      const data = await response.json();
-
-      // Validate that we have at least some expected fields
-      if (!data || typeof data !== 'object') {
-        console.warn('⚠️ Webhook returned invalid data structure');
-        return null;
-      }
-
-      console.log('✅ Webhook data received successfully:', {
-        reply_count: data.reply_count,
-        emails_sent_count: data.emails_sent_count,
-        new_leads_contacted_count: data.new_leads_contacted_count,
-        total_opportunities: data.total_opportunities,
-        total_opportunity_value: data.total_opportunity_value,
-        total_interested: data.total_interested,
-      });
-
-      return data;
-    } catch (error) {
-      console.error('❌ Webhook operation error:', {
-        error: error.message,
-        type: error.name,
-        stack: error.stack,
-        url: webhookUrl
-      });
-
-      return null;
+    } catch (fetchError) {
+      console.error('Network error:', fetchError);
+      throw new Error(`Network error: Unable to connect to webhook server. Please check if the server is running and accessible.`);
     }
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error('Webhook error response:', response.status, errorText);
+      throw new Error(`Webhook request failed with status ${response.status}: ${response.statusText}. Server response: ${errorText}`);
+    }
+
+    // Parse webhook response as JSON
+    const responseText = await response.text();
+
+    // Parse webhook response
+    let webhookData: WebhookResponse = {};
+    try {
+      webhookData = JSON.parse(responseText);
+    } catch (e) {
+      // If response is not JSON, treat it as plain text
+      webhookData = { response: responseText };
+    }
+
+    console.log('✅ Webhook data received successfully:', {
+      reply_count: webhookData.reply_count,
+      emails_sent_count: webhookData.emails_sent_count,
+      new_leads_contacted_count: webhookData.new_leads_contacted_count,
+      total_opportunities: webhookData.total_opportunities,
+      total_opportunity_value: webhookData.total_opportunity_value,
+      total_interested: webhookData.total_interested,
+    });
+
+    return webhookData;
   };
 
   const handleRefresh = async () => {
