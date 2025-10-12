@@ -126,7 +126,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     try {
       const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhook-proxy`;
 
-      // First, send POST trigger to initiate data collection
+      // Send POST trigger and wait for response (webhook responds within 5 seconds)
       const payload: any = {
         action: 'refresh_dashboard',
         client_key: clientKey,
@@ -139,9 +139,9 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         payload.endDate = formatDateForWebhook(endDate);
       }
 
-      console.log('Sending webhook trigger with payload:', payload);
+      console.log('🔄 Sending webhook trigger (single POST request):', payload);
 
-      const triggerResponse = await fetch(proxyUrl, {
+      const response = await fetch(proxyUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -154,45 +154,33 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         }),
       });
 
-      if (!triggerResponse.ok) {
-        console.error('Webhook trigger failed with status:', triggerResponse.status, triggerResponse.statusText);
-        const errorText = await triggerResponse.text();
+      if (!response.ok) {
+        console.error('❌ Webhook trigger failed with status:', response.status, response.statusText);
+        const errorText = await response.text();
         console.error('Error response:', errorText);
         return null;
       }
 
-      console.log('Webhook trigger sent successfully, waiting for data processing...');
+      const data = await response.json();
 
-      // Wait 3 seconds for Make.com to process the data
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Validate that we have at least some expected fields
+      if (!data || typeof data !== 'object') {
+        console.warn('⚠️ Webhook returned invalid data structure');
+        return null;
+      }
 
-      // Now fetch the processed data with GET request
-      console.log('Fetching processed data from webhook...');
-
-      const dataResponse = await fetch(proxyUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          webhookUrl,
-          method: 'GET',
-        }),
+      console.log('✅ Webhook data received successfully:', {
+        reply_count: data.reply_count,
+        emails_sent_count: data.emails_sent_count,
+        new_leads_contacted_count: data.new_leads_contacted_count,
+        total_opportunities: data.total_opportunities,
+        total_opportunity_value: data.total_opportunity_value,
+        total_interested: data.total_interested,
       });
 
-      if (!dataResponse.ok) {
-        console.error('Webhook data fetch failed with status:', dataResponse.status, dataResponse.statusText);
-        const errorText = await dataResponse.text();
-        console.error('Error response:', errorText);
-        return null;
-      }
-
-      const data = await dataResponse.json();
-      console.log('Webhook data fetched successfully:', data);
       return data;
     } catch (error) {
-      console.error('Webhook operation error details:', {
+      console.error('❌ Webhook operation error:', {
         error: error.message,
         type: error.name,
         stack: error.stack,
