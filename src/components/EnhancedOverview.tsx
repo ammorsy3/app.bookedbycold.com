@@ -22,6 +22,7 @@ interface WebhookResponse {
   total_opportunities?: string | number;
   total_opportunity_value?: string | number;
   total_interested?: string | number;
+  response?: string;
 }
 
 export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
@@ -44,34 +45,60 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     return `${year}-${month}-${day}`;
   };
 
-  const fetchWebhookData = async (webhookUrl: string): Promise<WebhookResponse | null> => {
+  const buildWebhookPayload = () => {
+    const webhookPayload: Record<string, any> = {
+      client_key: clientKey,
+      timestamp: new Date().toISOString(),
+      origin: typeof window !== 'undefined' ? window.location.origin : 'unknown',
+    };
+
+    if (startDate && endDate) {
+      webhookPayload.startDate = formatDateForWebhook(startDate);
+      webhookPayload.endDate = formatDateForWebhook(endDate);
+    }
+
+    return webhookPayload;
+  };
+
+  const sendWebhookRequest = async (
+    webhookUrl: string,
+    action: 'fetch_initial_metrics' | 'refresh_dashboard'
+  ): Promise<WebhookResponse | null> => {
     try {
-      console.log('Attempting to fetch webhook data from:', webhookUrl);
+      const payload = {
+        action,
+        ...buildWebhookPayload(),
+      };
 
-      const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhook-proxy`;
+      console.log(`Attempting to ${action} via webhook:`, webhookUrl);
+      console.log('📦 Payload:', payload);
 
-      const response = await fetch(proxyUrl, {
+      const response = await fetch(webhookUrl, {
         method: 'POST',
+        mode: 'cors',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          webhookUrl,
-          method: 'GET',
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        console.error('Webhook proxy request failed with status:', response.status, response.statusText);
-        const errorText = await response.text();
+        console.error('Webhook request failed with status:', response.status, response.statusText);
+        const errorText = await response.text().catch(() => 'Unknown error');
         console.error('Error response:', errorText);
         return null;
       }
 
-      const data = await response.json();
+      const responseText = await response.text();
 
-      // Validate that we have at least some expected fields
+      let data: WebhookResponse = {};
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        data = { response: responseText } as WebhookResponse;
+      }
+
       if (!data || typeof data !== 'object') {
         console.warn('Webhook returned invalid data structure');
         return null;
@@ -88,15 +115,19 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
       return data;
     } catch (error) {
-      console.error('Webhook fetch error details:', {
-        error: error.message,
-        type: error.name,
-        stack: error.stack,
-        url: webhookUrl
+      console.error('Webhook request error details:', {
+        error: (error as Error).message,
+        type: (error as Error).name,
+        stack: (error as Error).stack,
+        url: webhookUrl,
       });
 
       return null;
     }
+  };
+
+  const fetchWebhookData = async (webhookUrl: string): Promise<WebhookResponse | null> => {
+    return sendWebhookRequest(webhookUrl, 'fetch_initial_metrics');
   };
 
   // Parse and update metrics from webhook data
@@ -124,64 +155,11 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
   const triggerWebhook = async (webhookUrl: string): Promise<WebhookResponse | null> => {
     // Build payload to send to Make.com webhook
-    const webhookPayload: any = {
-      action: 'refresh_dashboard',
-      client_key: clientKey,
-      timestamp: new Date().toISOString(),
-      origin: window.location.origin,
-    };
+    const webhookData = await sendWebhookRequest(webhookUrl, 'refresh_dashboard');
 
-    if (startDate && endDate) {
-      webhookPayload.startDate = formatDateForWebhook(startDate);
-      webhookPayload.endDate = formatDateForWebhook(endDate);
+    if (!webhookData) {
+      throw new Error('Webhook did not return data. Please verify the Make.com scenario is active.');
     }
-
-    console.log('🔄 Triggering webhook:', webhookUrl);
-    console.log('📦 Payload:', webhookPayload);
-
-    // Send to webhook
-    let response;
-    try {
-      response = await fetch(webhookUrl, {
-        method: 'POST',
-        mode: 'cors',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(webhookPayload)
-      });
-    } catch (fetchError) {
-      console.error('Network error:', fetchError);
-      throw new Error(`Network error: Unable to connect to webhook server. Please check if the server is running and accessible.`);
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error');
-      console.error('Webhook error response:', response.status, errorText);
-      throw new Error(`Webhook request failed with status ${response.status}: ${response.statusText}. Server response: ${errorText}`);
-    }
-
-    // Parse webhook response as JSON
-    const responseText = await response.text();
-
-    // Parse webhook response
-    let webhookData: WebhookResponse = {};
-    try {
-      webhookData = JSON.parse(responseText);
-    } catch (e) {
-      // If response is not JSON, treat it as plain text
-      webhookData = { response: responseText };
-    }
-
-    console.log('✅ Webhook data received successfully:', {
-      reply_count: webhookData.reply_count,
-      emails_sent_count: webhookData.emails_sent_count,
-      new_leads_contacted_count: webhookData.new_leads_contacted_count,
-      total_opportunities: webhookData.total_opportunities,
-      total_opportunity_value: webhookData.total_opportunity_value,
-      total_interested: webhookData.total_interested,
-    });
 
     return webhookData;
   };
