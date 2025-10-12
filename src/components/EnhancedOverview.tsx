@@ -44,55 +44,91 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     return `${year}-${month}-${day}`;
   };
 
-  const fetchWebhookData = async (webhookUrl: string): Promise<WebhookResponse | null> => {
+  const buildWebhookPayload = (action: 'fetch_dashboard' | 'refresh_dashboard'): Record<string, unknown> => {
+    const payload: Record<string, unknown> = {
+      action,
+      client_key: clientKey,
+      timestamp: new Date().toISOString(),
+      origin: window.location.origin,
+    };
+
+    if (startDate && endDate) {
+      payload.startDate = formatDateForWebhook(startDate);
+      payload.endDate = formatDateForWebhook(endDate);
+    }
+
+    return payload;
+  };
+
+  const sendWebhookRequest = async (
+    webhookUrl: string,
+    payload: Record<string, unknown>
+  ): Promise<WebhookResponse | null> => {
+    console.log('🔄 Sending webhook request to:', webhookUrl);
+    console.log('📦 Payload:', payload);
+
+    let response: Response;
     try {
-      console.log('Attempting to fetch webhook data from:', webhookUrl);
-
-      const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhook-proxy`;
-
-      const response = await fetch(proxyUrl, {
+      response = await fetch(webhookUrl, {
         method: 'POST',
+        mode: 'cors',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          webhookUrl,
-          method: 'GET',
-        }),
+        body: JSON.stringify(payload),
       });
+    } catch (fetchError) {
+      console.error('Network error while contacting webhook:', fetchError);
+      throw new Error(
+        'Network error: Unable to connect to webhook server. Please check if the server is running and accessible.'
+      );
+    }
 
-      if (!response.ok) {
-        console.error('Webhook proxy request failed with status:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
-        return null;
-      }
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error('Webhook error response:', response.status, errorText);
+      throw new Error(
+        `Webhook request failed with status ${response.status}: ${response.statusText}. Server response: ${errorText}`
+      );
+    }
 
-      const data = await response.json();
+    const responseText = await response.text();
 
-      // Validate that we have at least some expected fields
-      if (!data || typeof data !== 'object') {
-        console.warn('Webhook returned invalid data structure');
-        return null;
-      }
+    let webhookData: WebhookResponse | null = null;
+    try {
+      webhookData = JSON.parse(responseText);
+    } catch (parseError) {
+      console.warn('Webhook returned non-JSON response:', responseText);
+    }
 
-      console.log('Webhook data received successfully:', {
-        reply_count: data.reply_count,
-        emails_sent_count: data.emails_sent_count,
-        new_leads_contacted_count: data.new_leads_contacted_count,
-        total_opportunities: data.total_opportunities,
-        total_opportunity_value: data.total_opportunity_value,
-        total_interested: data.total_interested,
-      });
+    if (!webhookData || typeof webhookData !== 'object') {
+      console.warn('Webhook returned invalid data structure');
+      return null;
+    }
 
-      return data;
+    console.log('✅ Webhook data received successfully:', {
+      reply_count: webhookData.reply_count,
+      emails_sent_count: webhookData.emails_sent_count,
+      new_leads_contacted_count: webhookData.new_leads_contacted_count,
+      total_opportunities: webhookData.total_opportunities,
+      total_opportunity_value: webhookData.total_opportunity_value,
+      total_interested: webhookData.total_interested,
+    });
+
+    return webhookData;
+  };
+
+  const fetchWebhookData = async (webhookUrl: string): Promise<WebhookResponse | null> => {
+    try {
+      return await sendWebhookRequest(webhookUrl, buildWebhookPayload('fetch_dashboard'));
     } catch (error) {
+      const err = error as Error;
       console.error('Webhook fetch error details:', {
-        error: error.message,
-        type: error.name,
-        stack: error.stack,
-        url: webhookUrl
+        error: err.message,
+        type: err.name,
+        stack: err.stack,
+        url: webhookUrl,
       });
 
       return null;
@@ -123,67 +159,11 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   };
 
   const triggerWebhook = async (webhookUrl: string): Promise<WebhookResponse | null> => {
-    // Build payload to send to Make.com webhook
-    const webhookPayload: any = {
-      action: 'refresh_dashboard',
-      client_key: clientKey,
-      timestamp: new Date().toISOString(),
-      origin: window.location.origin,
-    };
-
-    if (startDate && endDate) {
-      webhookPayload.startDate = formatDateForWebhook(startDate);
-      webhookPayload.endDate = formatDateForWebhook(endDate);
-    }
-
-    console.log('🔄 Triggering webhook:', webhookUrl);
-    console.log('📦 Payload:', webhookPayload);
-
-    // Send to webhook
-    let response;
     try {
-      response = await fetch(webhookUrl, {
-        method: 'POST',
-        mode: 'cors',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(webhookPayload)
-      });
-    } catch (fetchError) {
-      console.error('Network error:', fetchError);
-      throw new Error(`Network error: Unable to connect to webhook server. Please check if the server is running and accessible.`);
+      return await sendWebhookRequest(webhookUrl, buildWebhookPayload('refresh_dashboard'));
+    } catch (error) {
+      throw error;
     }
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error');
-      console.error('Webhook error response:', response.status, errorText);
-      throw new Error(`Webhook request failed with status ${response.status}: ${response.statusText}. Server response: ${errorText}`);
-    }
-
-    // Parse webhook response as JSON
-    const responseText = await response.text();
-
-    // Parse webhook response
-    let webhookData: WebhookResponse = {};
-    try {
-      webhookData = JSON.parse(responseText);
-    } catch (e) {
-      // If response is not JSON, treat it as plain text
-      webhookData = { response: responseText };
-    }
-
-    console.log('✅ Webhook data received successfully:', {
-      reply_count: webhookData.reply_count,
-      emails_sent_count: webhookData.emails_sent_count,
-      new_leads_contacted_count: webhookData.new_leads_contacted_count,
-      total_opportunities: webhookData.total_opportunities,
-      total_opportunity_value: webhookData.total_opportunity_value,
-      total_interested: webhookData.total_interested,
-    });
-
-    return webhookData;
   };
 
   const handleRefresh = async () => {
