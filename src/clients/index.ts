@@ -19,8 +19,6 @@ export interface ClientConfig {
     airtable: {
       crmUrl?: string;
       leadsUrl?: string;
-      crmExternalUrl?: string;
-      leadsExternalUrl?: string;
     };
     drive: {
       campaignFileId?: string;
@@ -39,18 +37,6 @@ export interface ClientConfig {
     value: string;
     icon: string;
     color: string;
-  }>;
-  quickActions?: Array<{
-    title: string;
-    description: string;
-    icon: string;
-    iconBgColor: string;
-    iconColor: string;
-    buttonColor: string;
-    stat: string;
-    link: string;
-    external?: string;
-    buttonText?: string;
   }>;
   financeData?: {
     items: Array<{

@@ -16,9 +16,7 @@ const config: ClientConfig = {
   integrations: {
     airtable: {
       crmUrl: 'https://airtable.com/embed/appdepbMC8HjPr3D9/shrGOao87lyCG8yKN',
-      leadsUrl: 'https://airtable.com/embed/appdepbMC8HjPr3D9/shrvaMOVVXFChOUOo?viewControls=on',
-      crmExternalUrl: 'https://airtable.com/appdepbMC8HjPr3D9/shrUpnBjEZjhPLJST',
-      leadsExternalUrl: 'https://airtable.com/appdepbMC8HjPr3D9/tbl0j3sAHYjA9nJTs/viwDFuuaeUhGuloNX?blocks=hide'
+      leadsUrl: 'https://airtable.com/embed/appdepbMC8HjPr3D9/shrvaMOVVXFChOUOo?viewControls=on'
     },
     drive: {
       campaignFileId: '1lbrZudT6pkugTEDPPGG5euqtaqYIjlhh',
@@ -37,61 +35,6 @@ const config: ClientConfig = {
     { label: 'Opportunity Value', value: '$108,000', icon: 'TrendingUp', color: 'text-green-600' },
     { label: 'Response Rate', value: '2.08%', icon: 'Target', color: 'text-purple-600' },
     { label: 'Subscriptions', value: '7', icon: 'CreditCard', color: 'text-orange-600' }
-  ],
-  quickActions: [
-    {
-      title: 'CRM Dashboard',
-      description: 'Access your complete customer relationship management system',
-      icon: 'Database',
-      iconBgColor: 'bg-blue-100',
-      iconColor: 'text-blue-600',
-      buttonColor: 'bg-blue-600 hover:bg-blue-700',
-      stat: '31% of our calls are good fit!',
-      link: '../crm',
-      external: 'https://airtable.com/appdepbMC8HjPr3D9/shrUpnBjEZjhPLJST',
-    },
-    {
-      title: 'Financial Overview',
-      description: 'Monthly subscriptions, terms, and pricing details',
-      icon: 'DollarSign',
-      iconBgColor: 'bg-green-100',
-      iconColor: 'text-green-600',
-      buttonColor: 'bg-green-600 hover:bg-green-700',
-      stat: '$119.00 due today (LinkedIn Sales Navigator)',
-      link: '../finance',
-    },
-    {
-      title: 'Leads Dashboard',
-      description: 'Track and manage your lead-generation pipeline',
-      icon: 'Target',
-      iconBgColor: 'bg-purple-100',
-      iconColor: 'text-purple-600',
-      buttonColor: 'bg-purple-600 hover:bg-purple-700',
-      stat: '49 new leads',
-      link: '../leads',
-      external: 'https://airtable.com/appdepbMC8HjPr3D9/tbl0j3sAHYjA9nJTs/viwDFuuaeUhGuloNX?blocks=hide',
-    },
-    {
-      title: 'Campaign Analytics',
-      description: 'Monitor email campaigns and outreach performance',
-      icon: 'BarChart3',
-      iconBgColor: 'bg-orange-100',
-      iconColor: 'text-orange-600',
-      buttonColor: 'bg-orange-600 hover:bg-orange-700',
-      stat: '18.2K Emails Sent',
-      link: '../campaigns',
-    },
-    {
-      title: 'Monthly Reports',
-      description: 'View and download detailed campaign PDFs',
-      icon: 'FileText',
-      iconBgColor: 'bg-slate-100',
-      iconColor: 'text-slate-600',
-      buttonColor: 'bg-slate-600 hover:bg-slate-700',
-      stat: 'Latest file: Aug 2025',
-      link: '../reports',
-      buttonText: 'Open',
-    },
   ],
   financeData: {
     items: [
