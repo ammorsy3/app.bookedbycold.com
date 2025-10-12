@@ -5,7 +5,6 @@ import { DashboardMetrics } from './DashboardMetrics';
 import { PerformanceCharts } from './PerformanceCharts';
 import { AutomatedInsights } from './AutomatedInsights';
 import { RefreshButton } from './RefreshButton';
-import { DateRangePicker } from './DateRangePicker';
 import { simulateWebhookData } from '../utils/webhookSimulator';
 import { getClientConfig } from '../clients';
 import { formatCurrency, formatNumber } from '../utils/numberFormatter';
@@ -14,18 +13,15 @@ interface EnhancedOverviewProps {
   clientKey: string;
 }
 
-interface DailyAnalytics {
-  date: string;
-  sent: number;
-  opened: number;
-  unique_opened: number;
-  replies: number;
-  unique_replies: number;
-  clicks: number;
-  unique_clicks: number;
+interface WebhookResponse {
+  reply_count?: string | number;
+  reply_count_unique?: string | number;
+  emails_sent_count?: string | number;
+  new_leads_contacted_count?: string | number;
+  total_opportunities?: string | number;
+  total_opportunity_value?: string | number;
+  total_interested?: string | number;
 }
-
-type WebhookResponse = DailyAnalytics[];
 
 export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   const [metricsData, setMetricsData] = useState({
@@ -37,16 +33,6 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     totalInterested: 0,
   });
 
-  const [startDate, setStartDate] = useState<Date | null>(new Date('2025-08-06'));
-  const [endDate, setEndDate] = useState<Date | null>(new Date());
-
-  const formatDateForWebhook = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
   const fetchWebhookData = async (webhookUrl: string): Promise<WebhookResponse | null> => {
     try {
       const response = await fetch(webhookUrl, {
@@ -57,39 +43,30 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       });
 
       if (!response.ok) {
-        console.error('Webhook request failed with status:', response.status);
+        console.error('Webhook request failed:', response.status);
         return null;
       }
 
       const text = await response.text();
-
-      if (!text || text.trim().length === 0) {
-        console.warn('Webhook returned empty response');
-        return null;
-      }
-
+      
       // Check if response is valid JSON
       let data;
       try {
         data = JSON.parse(text);
       } catch (jsonError) {
-        console.warn('Webhook response is not JSON. Response:', text.substring(0, 100));
-        console.warn('This usually means the webhook endpoint needs to return JSON data with the required fields.');
+        console.error('Webhook response is not valid JSON:', text);
         return null;
       }
-
-      // Validate that we have array of daily analytics
-      if (!Array.isArray(data)) {
-        console.warn('Webhook returned invalid data structure: expected array');
-        return null;
-      }
-
-      console.log('Webhook data received successfully:', {
-        totalDays: data.length,
-        dateRange: data.length > 0 ? `${data[0].date} to ${data[data.length - 1].date}` : 'N/A',
-        sampleDay: data[0],
+      
+      console.log('Raw webhook response:', data);
+      console.log('Field types:', {
+        reply_count: typeof data.reply_count,
+        emails_sent_count: typeof data.emails_sent_count,
+        new_leads_contacted_count: typeof data.new_leads_contacted_count,
+        total_opportunities: typeof data.total_opportunities,
+        total_opportunity_value: typeof data.total_opportunity_value,
+        total_interested: typeof data.total_interested,
       });
-
       return data;
     } catch (error) {
       console.error('Webhook fetch error:', error);
@@ -97,114 +74,68 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     }
   };
 
-  // Parse and update metrics from webhook data (array of daily analytics)
+  // Parse and update metrics from webhook data
   const updateMetricsFromWebhook = (webhookData: WebhookResponse) => {
-    if (!Array.isArray(webhookData) || webhookData.length === 0) {
-      console.warn('Invalid webhook data format: expected array of daily analytics');
-      return;
-    }
-
-    // Calculate totals by summing all daily values
-    const totals = webhookData.reduce(
-      (acc, day) => ({
-        sent: acc.sent + (day.sent || 0),
-        replies: acc.replies + (day.replies || 0),
-        unique_replies: acc.unique_replies + (day.unique_replies || 0),
-        opened: acc.opened + (day.opened || 0),
-        unique_opened: acc.unique_opened + (day.unique_opened || 0),
-        clicks: acc.clicks + (day.clicks || 0),
-        unique_clicks: acc.unique_clicks + (day.unique_clicks || 0),
-      }),
-      { sent: 0, replies: 0, unique_replies: 0, opened: 0, unique_opened: 0, clicks: 0, unique_clicks: 0 }
-    );
+    // Convert all values to numbers (handles both string and number inputs)
+    const parseNumber = (value: any): number => {
+      if (value === null || value === undefined || value === '') return 0;
+      const parsed = typeof value === 'string' ? parseInt(value, 10) : Number(value);
+      return isNaN(parsed) ? 0 : parsed;
+    };
 
     const newMetrics = {
-      replyCount: totals.unique_replies,
-      emailsSentCount: totals.sent,
-      newLeadsContactedCount: totals.unique_replies,
-      totalOpportunities: 0,
-      totalOpportunityValue: 0,
-      totalInterested: 0,
+      replyCount: parseNumber(webhookData.reply_count || webhookData.reply_count_unique),
+      emailsSentCount: parseNumber(webhookData.emails_sent_count),
+      newLeadsContactedCount: parseNumber(webhookData.new_leads_contacted_count),
+      totalOpportunities: parseNumber(webhookData.total_opportunities),
+      totalOpportunityValue: parseNumber(webhookData.total_opportunity_value),
+      totalInterested: parseNumber(webhookData.total_opportunities), // Same as opportunities
     };
 
     setMetricsData(newMetrics);
 
-    console.log('Dashboard updated with aggregated daily analytics:', {
-      dailyData: webhookData,
-      totals,
-      displayMetrics: newMetrics,
-    });
+    console.log('Dashboard updated with webhook data:', newMetrics);
   };
 
-  const triggerWebhook = async (webhookUrl: string): Promise<WebhookResponse | null> => {
+  const triggerWebhook = async (webhookUrl: string): Promise<void> => {
     try {
-      const payload: any = {
-        action: 'refresh_dashboard',
-        client_key: clientKey,
-        timestamp: new Date().toISOString(),
-      };
-
-      if (startDate && endDate) {
-        payload.startDate = formatDateForWebhook(startDate);
-        payload.endDate = formatDateForWebhook(endDate);
-      }
-
-      console.log('Sending webhook trigger with payload:', payload);
-
-      const response = await fetch(webhookUrl, {
+      await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          action: 'refresh_dashboard',
+          client_key: clientKey,
+          timestamp: new Date().toISOString(),
+        }),
       });
-
       console.log('Webhook trigger sent successfully');
-
-      if (!response.ok) {
-        console.error('Webhook request failed with status:', response.status);
-        return null;
-      }
-
-      const text = await response.text();
-
-      if (!text || text.trim().length === 0) {
-        console.warn('Webhook returned empty response');
-        return null;
-      }
-
-      try {
-        const data = JSON.parse(text);
-        console.log('Webhook response received:', data);
-        return data;
-      } catch (parseError) {
-        console.error('Failed to parse webhook response:', parseError);
-        return null;
-      }
     } catch (error) {
       console.error('Webhook trigger error:', error);
-      return null;
     }
   };
 
   const handleRefresh = async () => {
     const clientConfig = await getClientConfig(clientKey);
-
+    
     // Check if webhook is enabled and configured
     if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
       const webhookUrl = clientConfig.integrations.webhook.url;
-
-      // Trigger webhook and get response in ONE call
-      const webhookData = await triggerWebhook(webhookUrl);
-
+      
+      await triggerWebhook(webhookUrl);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const webhookData = await fetchWebhookData(webhookUrl);
+      
       if (webhookData) {
         updateMetricsFromWebhook(webhookData);
         return;
       }
-
-      console.log('Webhook returned invalid data, falling back to simulated data');
+      
+      console.log('Webhook failed, falling back to simulated data');
     } else {
-      console.log('Webhook not configured, using simulated data');
+      console.log('Webhook disabled, using simulated data');
     }
 
     // Fallback to simulated data
@@ -228,9 +159,9 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
           return;
         }
         
-        console.log('Webhook returned invalid data on initial load, falling back to simulated data');
+        console.log('Webhook failed on initial load, falling back to simulated data');
       } else {
-        console.log('Webhook not configured, using simulated data for initial load');
+        console.log('Webhook disabled, using simulated data for initial load');
       }
       
       // Fallback to simulated data
@@ -240,40 +171,6 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
     loadInitialData();
   }, [clientKey]);
-
-  const handleDateChange = (dates: [Date | null, Date | null]) => {
-    const [start, end] = dates;
-    setStartDate(start);
-    setEndDate(end);
-  };
-
-  const calculateDaysBetween = (start: Date | null, end: Date | null): number => {
-    if (!start || !end) return 0;
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays + 1;
-  };
-
-  const setQuickDateRange = (range: 'last7days' | 'last4weeks' | 'last3months') => {
-    const today = new Date();
-    const end = new Date(today);
-    let start = new Date(today);
-
-    switch (range) {
-      case 'last7days':
-        start.setDate(today.getDate() - 6);
-        break;
-      case 'last4weeks':
-        start.setDate(today.getDate() - 27);
-        break;
-      case 'last3months':
-        start.setMonth(today.getMonth() - 3);
-        break;
-    }
-
-    setStartDate(start);
-    setEndDate(end);
-  };
 
   const quickActions = [
     {
@@ -328,51 +225,6 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
           <p className="text-gray-600">Real-time metrics and automated insights for data-driven decisions</p>
         </div>
         <RefreshButton onRefresh={handleRefresh} cooldownSeconds={15} />
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-        <div className="flex items-center gap-6">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Analytics Period
-            </label>
-            <div className="flex gap-3 mb-3">
-              <button
-                onClick={() => setQuickDateRange('last7days')}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                Last 7 Days
-              </button>
-              <button
-                onClick={() => setQuickDateRange('last4weeks')}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                Last 4 Weeks
-              </button>
-              <button
-                onClick={() => setQuickDateRange('last3months')}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                Last 3 Months
-              </button>
-            </div>
-            <DateRangePicker
-              startDate={startDate}
-              endDate={endDate}
-              onChange={handleDateChange}
-              placeholderText="Select date range for analytics"
-            />
-          </div>
-          <div className="text-sm text-gray-500 mt-7">
-            <p>Campaign started: 6 Aug 2025</p>
-            <p>Viewing: {startDate && endDate ? `${formatDateForWebhook(startDate)} to ${formatDateForWebhook(endDate)}` : 'All time'}</p>
-            {startDate && endDate && (
-              <p className="text-gray-600 font-medium mt-1">
-                {calculateDaysBetween(startDate, endDate)} days selected
-              </p>
-            )}
-          </div>
-        </div>
       </div>
 
       <div className="space-y-8">
@@ -466,3 +318,6 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 }
 
 export default EnhancedOverview;
+
+
+export { EnhancedOverview }

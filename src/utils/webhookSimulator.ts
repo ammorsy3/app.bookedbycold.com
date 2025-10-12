@@ -9,13 +9,21 @@ export interface DailyAnalytics {
   unique_clicks: number;
 }
 
-export type WebhookPayload = DailyAnalytics[];
+export interface WebhookSummary {
+  totalLeadsContacted: string;
+  totalOpportunities: string;
+  totaloOpportunitiesValue: string;
+}
+
+export interface WebhookPayload {
+  dailyData: DailyAnalytics[];
+  summary: WebhookSummary;
+}
 
 export async function simulateWebhookData(): Promise<WebhookPayload> {
   await new Promise((resolve) => setTimeout(resolve, 800));
 
-  // Generate 5 days of mock data
-  const mockData: DailyAnalytics[] = [
+  const dailyData: DailyAnalytics[] = [
     {
       date: '2025-10-06',
       sent: 448,
@@ -68,7 +76,13 @@ export async function simulateWebhookData(): Promise<WebhookPayload> {
     },
   ];
 
-  return mockData;
+  const summary: WebhookSummary = {
+    totalLeadsContacted: '0',
+    totalOpportunities: '1',
+    totaloOpportunitiesValue: '2250',
+  };
+
+  return { dailyData, summary };
 }
 
 export async function fetchWebhookData(webhookUrl: string): Promise<WebhookPayload | null> {
@@ -84,8 +98,22 @@ export async function fetchWebhookData(webhookUrl: string): Promise<WebhookPaylo
       throw new Error(`Webhook request failed: ${response.status}`);
     }
 
-    const data = await response.json();
-    return data;
+    const rawData = await response.json();
+
+    // Parse the response structure: array of daily data + summary object
+    if (Array.isArray(rawData) && rawData.length === 2) {
+      const dailyData = rawData[0] as DailyAnalytics[];
+      const summary = rawData[1] as WebhookSummary;
+      return { dailyData, summary };
+    }
+
+    // Fallback: if data is already in correct format
+    if (rawData.dailyData && rawData.summary) {
+      return rawData as WebhookPayload;
+    }
+
+    console.error('Unexpected webhook data format:', rawData);
+    return null;
   } catch (error) {
     console.error('Webhook fetch error:', error);
     return null;
