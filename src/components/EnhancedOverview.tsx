@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, Database, DollarSign, Target, FileText, TrendingUp } from 'lucide-react';
+import { ExternalLink, Database, DollarSign, Target, FileText, BarChart3, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { DashboardMetrics } from './DashboardMetrics';
 import { PerformanceCharts } from './PerformanceCharts';
@@ -44,99 +44,129 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     return `${year}-${month}-${day}`;
   };
 
-  // GET for initial load (no headers so CORS preflight is avoided)
   const fetchWebhookData = async (webhookUrl: string): Promise<WebhookResponse | null> => {
     try {
-      const response = await fetch(webhookUrl, { method: 'GET' });
+      const response = await fetch(webhookUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
       if (!response.ok) {
-        console.error('Webhook GET failed with status:', response.status);
+        console.error('Webhook request failed with status:', response.status);
         return null;
       }
 
-      const text = (await response.text())?.trim();
-      if (!text) {
-        console.warn('Webhook GET returned empty response');
+      const text = await response.text();
+
+      if (!text || text.trim().length === 0) {
+        console.warn('Webhook returned empty response');
         return null;
       }
 
+      // Check if response is valid JSON
+      let data;
       try {
-        const data = JSON.parse(text);
-        console.log('Webhook GET data:', data);
-        return data;
-      } catch (err) {
-        console.warn('Webhook GET response not JSON. First 100 chars:', text.substring(0, 100));
+        data = JSON.parse(text);
+      } catch (jsonError) {
+        console.warn('Webhook response is not JSON. Response:', text.substring(0, 100));
+        console.warn('This usually means the webhook endpoint needs to return JSON data with the required fields.');
         return null;
       }
+
+      // Validate that we have at least some expected fields
+      if (!data || typeof data !== 'object') {
+        console.warn('Webhook returned invalid data structure');
+        return null;
+      }
+
+      console.log('Webhook data received successfully:', {
+        reply_count: data.reply_count,
+        emails_sent_count: data.emails_sent_count,
+        new_leads_contacted_count: data.new_leads_contacted_count,
+        total_opportunities: data.total_opportunities,
+        total_opportunity_value: data.total_opportunity_value,
+        total_interested: data.total_interested,
+      });
+
+      return data;
     } catch (error) {
-      console.error('Webhook GET error:', error);
+      console.error('Webhook fetch error:', error);
       return null;
     }
   };
 
   // Parse and update metrics from webhook data
   const updateMetricsFromWebhook = (webhookData: WebhookResponse) => {
+    // Convert all values to numbers (handles both string and number inputs)
     const parseNumber = (value: any): number => {
       if (value === null || value === undefined || value === '') return 0;
-      const n = typeof value === 'string' ? Number(value) : Number(value);
-      return Number.isFinite(n) ? n : 0;
+      const parsed = typeof value === 'string' ? parseInt(value, 10) : Number(value);
+      return isNaN(parsed) ? 0 : parsed;
     };
 
     const newMetrics = {
-      replyCount: parseNumber(webhookData.reply_count ?? webhookData.reply_count_unique),
+      replyCount: parseNumber(webhookData.reply_count || webhookData.reply_count_unique),
       emailsSentCount: parseNumber(webhookData.emails_sent_count),
       newLeadsContactedCount: parseNumber(webhookData.new_leads_contacted_count),
       totalOpportunities: parseNumber(webhookData.total_opportunities),
       totalOpportunityValue: parseNumber(webhookData.total_opportunity_value),
-      totalInterested: parseNumber(webhookData.total_interested ?? webhookData.total_opportunities),
+      totalInterested: parseNumber(webhookData.total_opportunities), // Same as opportunities
     };
 
     setMetricsData(newMetrics);
+
     console.log('Dashboard updated with webhook data:', newMetrics);
   };
 
-  // POST trigger for refresh; tolerate 204/empty body
-  const triggerWebhook = async (webhookUrl: string): Promise<WebhookResponse | {} | null> => {
+  const triggerWebhook = async (webhookUrl: string): Promise<WebhookResponse | null> => {
     try {
-      const payload: Record<string, any> = {
+      const payload: any = {
         action: 'refresh_dashboard',
         client_key: clientKey,
         timestamp: new Date().toISOString(),
       };
+
       if (startDate && endDate) {
         payload.startDate = formatDateForWebhook(startDate);
         payload.endDate = formatDateForWebhook(endDate);
       }
 
-      console.log('Sending webhook POST payload:', payload);
+      console.log('Sending webhook trigger with payload:', payload);
 
       const response = await fetch(webhookUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(payload),
       });
 
+      console.log('Webhook trigger sent successfully');
+
       if (!response.ok) {
-        console.error('Webhook POST failed with status:', response.status);
+        console.error('Webhook request failed with status:', response.status);
         return null;
       }
 
-      console.log('Webhook POST accepted');
+      const text = await response.text();
 
-      // 204 No Content or empty body → still success
-      const text = (await response.text())?.trim();
-      if (!text) return {};
+      if (!text || text.trim().length === 0) {
+        console.warn('Webhook returned empty response');
+        return null;
+      }
 
       try {
         const data = JSON.parse(text);
-        console.log('Webhook POST response JSON:', data);
+        console.log('Webhook response received:', data);
         return data;
       } catch (parseError) {
-        console.warn('Webhook POST response not JSON; treating as success with empty object');
-        return {};
+        console.error('Failed to parse webhook response:', parseError);
+        return null;
       }
     } catch (error) {
-      console.error('Webhook POST error:', error);
+      console.error('Webhook trigger error:', error);
       return null;
     }
   };
@@ -144,26 +174,19 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   const handleRefresh = async () => {
     const clientConfig = await getClientConfig(clientKey);
 
+    // Check if webhook is enabled and configured
     if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
       const webhookUrl = clientConfig.integrations.webhook.url;
 
+      // Trigger webhook and get response in ONE call
       const webhookData = await triggerWebhook(webhookUrl);
-      if (webhookData) {
-        // if the trigger returned data, use it; if {}, optionally refetch via GET
-        if (Object.keys(webhookData).length > 0) {
-          updateMetricsFromWebhook(webhookData as WebhookResponse);
-          return;
-        }
 
-        // optional follow-up GET to fetch updated aggregates after trigger
-        const followUp = await fetchWebhookData(webhookUrl);
-        if (followUp) {
-          updateMetricsFromWebhook(followUp);
-          return;
-        }
+      if (webhookData) {
+        updateMetricsFromWebhook(webhookData);
+        return;
       }
 
-      console.log('Webhook returned invalid/empty data, falling back to simulated data');
+      console.log('Webhook returned invalid data, falling back to simulated data');
     } else {
       console.log('Webhook not configured, using simulated data');
     }
@@ -177,7 +200,8 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   useEffect(() => {
     const loadInitialData = async () => {
       const clientConfig = await getClientConfig(clientKey);
-
+      
+      // Check if webhook is enabled and configured
       if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
         console.log('Loading initial webhook data...');
         const webhookData = await fetchWebhookData(clientConfig.integrations.webhook.url);
@@ -187,18 +211,18 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
           updateMetricsFromWebhook(webhookData);
           return;
         }
-
-        console.log('Webhook invalid on initial load, falling back to simulated data');
+        
+        console.log('Webhook returned invalid data on initial load, falling back to simulated data');
       } else {
         console.log('Webhook not configured, using simulated data for initial load');
       }
-
+      
+      // Fallback to simulated data
       const simulatedData = simulateWebhookData();
       updateMetricsFromWebhook(simulatedData);
     };
 
     loadInitialData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientKey]);
 
   const handleDateChange = (dates: [Date | null, Date | null]) => {
@@ -281,11 +305,6 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     },
   ];
 
-  const responseRate =
-    metricsData.newLeadsContactedCount > 0
-      ? ((metricsData.replyCount / metricsData.newLeadsContactedCount) * 100).toFixed(2)
-      : '0.00';
-
   return (
     <main className="max-w-7xl mx-auto px-6 py-8">
       <div className="flex items-center justify-between mb-8">
@@ -293,14 +312,15 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Campaign Performance Dashboard</h2>
           <p className="text-gray-600">Real-time metrics and automated insights for data-driven decisions</p>
         </div>
-        {/* IMPORTANT: use onClick so the handler actually fires */}
-        <RefreshButton onClick={handleRefresh} cooldownSeconds={15} />
+        <RefreshButton onRefresh={handleRefresh} cooldownSeconds={15} />
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
         <div className="flex items-center gap-6">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Analytics Period</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Analytics Period
+            </label>
             <div className="flex gap-3 mb-3">
               <button
                 onClick={() => setQuickDateRange('last7days')}
@@ -330,12 +350,11 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
           </div>
           <div className="text-sm text-gray-500 mt-7">
             <p>Campaign started: 6 Aug 2025</p>
-            <p>
-              Viewing:{' '}
-              {startDate && endDate ? `${formatDateForWebhook(startDate)} to ${formatDateForWebhook(endDate)}` : 'All time'}
-            </p>
+            <p>Viewing: {startDate && endDate ? `${formatDateForWebhook(startDate)} to ${formatDateForWebhook(endDate)}` : 'All time'}</p>
             {startDate && endDate && (
-              <p className="text-gray-600 font-medium mt-1">{calculateDaysBetween(startDate, endDate)} days selected</p>
+              <p className="text-gray-600 font-medium mt-1">
+                {calculateDaysBetween(startDate, endDate)} days selected
+              </p>
             )}
           </div>
         </div>
@@ -346,7 +365,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
           clientKey={clientKey}
           metrics={{
             ...metricsData,
-            lastUpdated: new Date().toISOString(),
+            lastUpdated: new Date().toISOString()
           }}
         />
 
@@ -370,7 +389,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
               opportunities={metricsData.totalOpportunities}
               opportunityValue={metricsData.totalOpportunityValue}
               leads={metricsData.newLeadsContactedCount}
-              interested={metricsData.totalInterested} {/* fixed */}
+              interested={metricsData.totalOpportunities}
             />
           </div>
         </div>
@@ -387,7 +406,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
                 <strong>{formatNumber(metricsData.emailsSentCount, 'compact')} emails sent</strong>. Generated{' '}
                 <strong>{formatCurrency(metricsData.totalOpportunityValue, 'compact')} in pipeline value</strong> from{' '}
                 <strong>{metricsData.totalOpportunities} qualified opportunities</strong>. Response rate of{' '}
-                <strong>{responseRate}%</strong> demonstrates strong market engagement.
+                <strong>{((metricsData.replyCount / metricsData.newLeadsContactedCount) * 100).toFixed(2)}%</strong> demonstrates strong market engagement.
               </p>
             </div>
           </div>
@@ -397,17 +416,24 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
           <h3 className="text-xl font-bold text-gray-900 mb-4">Quick Access</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {quickActions.map((action) => (
-              <div key={action.title} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow relative">
+              <div
+                key={action.title}
+                className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow relative"
+              >
                 <div className="flex items-start justify-between mb-4">
                   <div className={`${action.iconBgColor} p-4 rounded-2xl`}>
                     <action.icon className={`w-8 h-8 ${action.iconColor}`} />
                   </div>
-                  {action.external && <ExternalLink className="w-5 h-5 text-gray-300" />}
+                  {action.external && (
+                    <ExternalLink className="w-5 h-5 text-gray-300" />
+                  )}
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">{action.title}</h3>
                 <p className="text-sm text-gray-600 mb-6">{action.description}</p>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700">{action.stat}</span>
+                  <span className="text-sm text-gray-700">
+                    {action.stat}
+                  </span>
                   {action.external ? (
                     <a
                       href={action.external}
@@ -419,7 +445,10 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
                       <ExternalLink className="w-4 h-4" />
                     </a>
                   ) : (
-                    <Link to={action.link} className={`inline-flex items-center gap-2 px-4 py-2 ${action.buttonColor} text-white rounded-lg font-medium transition-colors`}>
+                    <Link
+                      to={action.link}
+                      className={`inline-flex items-center gap-2 px-4 py-2 ${action.buttonColor} text-white rounded-lg font-medium transition-colors`}
+                    >
                       {action.buttonText || 'Access'} →
                     </Link>
                   )}
@@ -434,48 +463,3 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 }
 
 export default EnhancedOverview;
-RefreshButton.tsx
-import React, { useEffect, useState } from 'react';
-
-type Props = {
-  onClick: () => void | Promise<void>;
-  cooldownSeconds?: number;
-  className?: string;
-};
-
-export const RefreshButton: React.FC<Props> = ({ onClick, cooldownSeconds = 15, className }) => {
-  const [cooldown, setCooldown] = useState(0);
-
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const id = setInterval(() => setCooldown((c) => c - 1), 1000);
-    return () => clearInterval(id);
-  }, [cooldown]);
-
-  const handleClick = async () => {
-    if (cooldown > 0) return;
-    try {
-      await onClick?.();
-    } finally {
-      setCooldown(cooldownSeconds);
-    }
-  };
-
-  return (
-    <button
-      onClick={handleClick}
-      disabled={cooldown > 0}
-      className={
-        className ??
-        `inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300
-         text-white rounded-lg font-medium transition-colors`
-      }
-      aria-disabled={cooldown > 0}
-      title={cooldown > 0 ? `Please wait ${cooldown}s` : 'Refresh data'}
-    >
-      {cooldown > 0 ? `Wait ${cooldown}s` : 'Refresh Data'}
-    </button>
-  );
-};
-
-export default RefreshButton;
