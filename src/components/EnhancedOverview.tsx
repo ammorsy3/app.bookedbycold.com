@@ -26,9 +26,9 @@ interface DailyAnalytics {
 }
 
 interface OverallCampaignAnalytics {
-  reply_count: string | number;
-  emails_sent_count: string | number;
-  new_leads_contacted_count: string | number;
+  total_reply_count: string | number;
+  total_emails_sent_count: string | number;
+  total_new_leads_contacted_count: string | number;
   total_opportunities: string | number;
   total_opportunity_value: string | number;
 }
@@ -124,9 +124,9 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     };
 
     const newMetrics = {
-      replyCount: parseNumber(overall.reply_count),
-      emailsSentCount: parseNumber(overall.emails_sent_count),
-      newLeadsContactedCount: parseNumber(overall.new_leads_contacted_count),
+      replyCount: parseNumber(overall.total_reply_count),
+      emailsSentCount: parseNumber(overall.total_emails_sent_count),
+      newLeadsContactedCount: parseNumber(overall.total_new_leads_contacted_count),
       totalOpportunities: parseNumber(overall.total_opportunities),
       totalOpportunityValue: parseNumber(overall.total_opportunity_value),
       totalInterested: parseNumber(overall.total_opportunities),

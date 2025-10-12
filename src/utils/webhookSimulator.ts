@@ -10,9 +10,9 @@ export interface DailyAnalytics {
 }
 
 export interface OverallCampaignAnalytics {
-  reply_count: string | number;
-  emails_sent_count: string | number;
-  new_leads_contacted_count: string | number;
+  total_reply_count: string | number;
+  total_emails_sent_count: string | number;
+  total_new_leads_contacted_count: string | number;
   total_opportunities: string | number;
   total_opportunity_value: string | number;
 }
@@ -27,9 +27,9 @@ export async function simulateWebhookData(): Promise<WebhookPayload> {
 
   const mockData: WebhookPayload = {
     overAllCampaignAnalytics: {
-      reply_count: '2',
-      emails_sent_count: '778',
-      new_leads_contacted_count: '0',
+      total_reply_count: '2',
+      total_emails_sent_count: '778',
+      total_new_leads_contacted_count: '0',
       total_opportunities: '1',
       total_opportunity_value: '2250',
     },
