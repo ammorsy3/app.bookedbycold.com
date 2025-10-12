@@ -109,12 +109,15 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
   // Parse and update metrics from webhook data (overall campaign analytics)
   const updateMetricsFromWebhook = (webhookData: WebhookResponse) => {
+    console.log('updateMetricsFromWebhook called with:', webhookData);
+
     if (!webhookData || !webhookData.overAllCampaignAnalytics) {
-      console.warn('Invalid webhook data format: expected overAllCampaignAnalytics');
+      console.warn('Invalid webhook data format: expected overAllCampaignAnalytics', webhookData);
       return;
     }
 
     const overall = webhookData.overAllCampaignAnalytics;
+    console.log('Overall campaign analytics:', overall);
 
     // Convert all values to numbers (handles both string and number inputs)
     const parseNumber = (value: any): number => {
@@ -132,12 +135,22 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       totalInterested: parseNumber(overall.total_opportunities),
     };
 
+    console.log('Parsed metrics:', {
+      'total_reply_count': overall.total_reply_count,
+      'parsed replyCount': newMetrics.replyCount,
+      'total_emails_sent_count': overall.total_emails_sent_count,
+      'parsed emailsSentCount': newMetrics.emailsSentCount,
+      'total_new_leads_contacted_count': overall.total_new_leads_contacted_count,
+      'parsed newLeadsContactedCount': newMetrics.newLeadsContactedCount,
+      'total_opportunities': overall.total_opportunities,
+      'parsed totalOpportunities': newMetrics.totalOpportunities,
+      'total_opportunity_value': overall.total_opportunity_value,
+      'parsed totalOpportunityValue': newMetrics.totalOpportunityValue,
+    });
+
     setMetricsData(newMetrics);
 
-    console.log('Dashboard updated with overall campaign analytics:', {
-      overallData: overall,
-      displayMetrics: newMetrics,
-    });
+    console.log('Dashboard metrics state updated to:', newMetrics);
   };
 
   const triggerWebhook = async (webhookUrl: string): Promise<WebhookResponse | null> => {
@@ -220,25 +233,25 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   useEffect(() => {
     const loadInitialData = async () => {
       const clientConfig = await getClientConfig(clientKey);
-      
+
       // Check if webhook is enabled and configured
       if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
-        console.log('Loading initial webhook data...');
-        const webhookData = await fetchWebhookData(clientConfig.integrations.webhook.url);
+        console.log('Loading initial webhook data using POST request...');
+        const webhookData = await triggerWebhook(clientConfig.integrations.webhook.url);
 
         if (webhookData) {
           console.log('Initial webhook data received, updating dashboard...');
           updateMetricsFromWebhook(webhookData);
           return;
         }
-        
+
         console.log('Webhook returned invalid data on initial load, falling back to simulated data');
       } else {
         console.log('Webhook not configured, using simulated data for initial load');
       }
-      
+
       // Fallback to simulated data
-      const simulatedData = simulateWebhookData();
+      const simulatedData = await simulateWebhookData();
       updateMetricsFromWebhook(simulatedData);
     };
 
