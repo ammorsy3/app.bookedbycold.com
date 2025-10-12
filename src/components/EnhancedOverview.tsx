@@ -6,9 +6,14 @@ import { PerformanceCharts } from './PerformanceCharts';
 import { AutomatedInsights } from './AutomatedInsights';
 import { RefreshButton } from './RefreshButton';
 import { DateRangePicker } from './DateRangePicker';
-import { simulateWebhookData } from '../utils/webhookSimulator';
+import { createClient } from '@supabase/supabase-js';
 import { getClientConfig } from '../clients';
 import { formatCurrency, formatNumber } from '../utils/numberFormatter';
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 interface EnhancedOverviewProps {
   clientKey: string;
@@ -204,55 +209,73 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     }
   };
 
-  const handleRefresh = async () => {
-    const clientConfig = await getClientConfig(clientKey);
+  // Fetch latest data from Supabase
+  const fetchLatestAnalytics = async () => {
+    try {
+      console.log('Fetching latest analytics from Supabase for client:', clientKey);
 
-    // Check if webhook is enabled and configured
-    if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
-      const webhookUrl = clientConfig.integrations.webhook.url;
+      const { data, error } = await supabase
+        .from('campaign_analytics')
+        .select('*')
+        .eq('client_key', clientKey)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      // Trigger webhook and get response in ONE call
-      const webhookData = await triggerWebhook(webhookUrl);
-
-      if (webhookData) {
-        updateMetricsFromWebhook(webhookData);
-        return;
+      if (error) {
+        console.error('Error fetching analytics:', error);
+        return null;
       }
 
-      console.log('Webhook returned invalid data, falling back to simulated data');
-    } else {
-      console.log('Webhook not configured, using simulated data');
-    }
+      if (!data) {
+        console.log('No analytics data found for client:', clientKey);
+        return null;
+      }
 
-    // Fallback to simulated data
-    const simulatedData = simulateWebhookData();
-    updateMetricsFromWebhook(simulatedData);
+      console.log('Fetched analytics data:', data);
+      return data;
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+      return null;
+    }
+  };
+
+  // Update metrics from database row
+  const updateMetricsFromDatabase = (row: any) => {
+    if (!row) return;
+
+    const newMetrics = {
+      replyCount: row.total_reply_count || 0,
+      emailsSentCount: row.total_emails_sent_count || 0,
+      newLeadsContactedCount: row.total_new_leads_contacted_count || 0,
+      totalOpportunities: row.total_opportunities || 0,
+      totalOpportunityValue: row.total_opportunity_value || 0,
+      totalInterested: row.total_opportunities || 0,
+    };
+
+    console.log('Updating dashboard with database metrics:', newMetrics);
+    setMetricsData(newMetrics);
+  };
+
+  const handleRefresh = async () => {
+    console.log('Refreshing dashboard data...');
+    const data = await fetchLatestAnalytics();
+    if (data) {
+      updateMetricsFromDatabase(data);
+    } else {
+      console.log('No data available after refresh');
+    }
   };
 
   // Fetch initial data on mount
   useEffect(() => {
     const loadInitialData = async () => {
-      const clientConfig = await getClientConfig(clientKey);
-
-      // Check if webhook is enabled and configured
-      if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
-        console.log('Loading initial webhook data using POST request...');
-        const webhookData = await triggerWebhook(clientConfig.integrations.webhook.url);
-
-        if (webhookData) {
-          console.log('Initial webhook data received, updating dashboard...');
-          updateMetricsFromWebhook(webhookData);
-          return;
-        }
-
-        console.log('Webhook returned invalid data on initial load, falling back to simulated data');
+      const data = await fetchLatestAnalytics();
+      if (data) {
+        updateMetricsFromDatabase(data);
       } else {
-        console.log('Webhook not configured, using simulated data for initial load');
+        console.log('No data available, using default zeros');
       }
-
-      // Fallback to simulated data
-      const simulatedData = await simulateWebhookData();
-      updateMetricsFromWebhook(simulatedData);
     };
 
     loadInitialData();
