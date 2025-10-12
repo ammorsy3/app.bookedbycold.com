@@ -34,6 +34,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     totalInterested: 0,
   });
 
+  const [clientConfig, setClientConfig] = useState<any>(null);
   const [startDate, setStartDate] = useState<Date | null>(new Date('2025-08-06'));
   const [endDate, setEndDate] = useState<Date | null>(new Date());
 
@@ -199,24 +200,25 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   // Fetch initial data on mount
   useEffect(() => {
     const loadInitialData = async () => {
-      const clientConfig = await getClientConfig(clientKey);
-      
+      const config = await getClientConfig(clientKey);
+      setClientConfig(config);
+
       // Check if webhook is enabled and configured
-      if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
+      if (config?.integrations?.webhook?.enabled && config?.integrations?.webhook?.url) {
         console.log('Loading initial webhook data...');
-        const webhookData = await fetchWebhookData(clientConfig.integrations.webhook.url);
+        const webhookData = await fetchWebhookData(config.integrations.webhook.url);
 
         if (webhookData) {
           console.log('Initial webhook data received, updating dashboard...');
           updateMetricsFromWebhook(webhookData);
           return;
         }
-        
+
         console.log('Webhook returned invalid data on initial load, falling back to simulated data');
       } else {
         console.log('Webhook not configured, using simulated data for initial load');
       }
-      
+
       // Fallback to simulated data
       const simulatedData = simulateWebhookData();
       updateMetricsFromWebhook(simulatedData);
@@ -259,51 +261,19 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     setEndDate(end);
   };
 
-  const quickActions = [
-    {
-      title: 'CRM Dashboard',
-      description: 'Access your complete customer relationship management system',
-      icon: Database,
-      iconBgColor: 'bg-blue-100',
-      iconColor: 'text-blue-600',
-      buttonColor: 'bg-blue-600 hover:bg-blue-700',
-      stat: '31% of our calls are good fit!',
-      link: '../crm',
-      external: 'https://airtable.com/appdepbMC8HjPr3D9/shrUpnBjEZjhPLJST',
-    },
-    {
-      title: 'Financial Overview',
-      description: 'Monthly subscriptions, terms, and pricing details',
-      icon: DollarSign,
-      iconBgColor: 'bg-green-100',
-      iconColor: 'text-green-600',
-      buttonColor: 'bg-green-600 hover:bg-green-700',
-      stat: '$119.00 due today (LinkedIn Sales Navigator)',
-      link: '../finance',
-    },
-    {
-      title: 'Leads Dashboard',
-      description: 'Track and manage your lead-generation pipeline',
-      icon: Target,
-      iconBgColor: 'bg-purple-100',
-      iconColor: 'text-purple-600',
-      buttonColor: 'bg-purple-600 hover:bg-purple-700',
-      stat: '49 new leads',
-      link: '../leads',
-      external: 'https://airtable.com/appdepbMC8HjPr3D9/tbl0j3sAHYjA9nJTs/viwDFuuaeUhGuloNX?blocks=hide',
-    },
-    {
-      title: 'Monthly Reports',
-      description: 'View and download detailed campaign PDFs',
-      icon: FileText,
-      iconBgColor: 'bg-slate-100',
-      iconColor: 'text-slate-600',
-      buttonColor: 'bg-slate-600 hover:bg-slate-700',
-      stat: 'Latest file: Aug 2025',
-      link: '../reports',
-      buttonText: 'Open',
-    },
-  ];
+  // Icon mapping for string-based icon names from config
+  const iconMap: { [key: string]: any } = {
+    Database,
+    DollarSign,
+    Target,
+    BarChart3,
+    FileText,
+  };
+
+  const quickActions = clientConfig?.quickActions?.map((action: any) => ({
+    ...action,
+    icon: iconMap[action.icon] || Database,
+  })) || [];
 
   return (
     <main className="max-w-7xl mx-auto px-6 py-8">
