@@ -122,6 +122,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
   const triggerWebhook = async (webhookUrl: string): Promise<WebhookResponse | null> => {
     try {
+      // First, send POST trigger to initiate data collection
       const payload: any = {
         action: 'refresh_dashboard',
         client_key: clientKey,
@@ -135,7 +136,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
       console.log('Sending webhook trigger with payload:', payload);
 
-      const response = await fetch(webhookUrl, {
+      const triggerResponse = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,30 +144,49 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         body: JSON.stringify(payload),
       });
 
-      console.log('Webhook trigger sent successfully');
-
-      if (!response.ok) {
-        console.error('Webhook request failed with status:', response.status);
+      if (!triggerResponse.ok) {
+        console.error('Webhook trigger failed with status:', triggerResponse.status);
         return null;
       }
 
-      const text = await response.text();
+      console.log('Webhook trigger sent successfully, waiting for data processing...');
 
-      if (!text || text.trim().length === 0) {
-        console.warn('Webhook returned empty response');
+      // Wait 3 seconds for Make.com to process the data
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      // Now fetch the processed data with GET request
+      console.log('Fetching processed data from webhook...');
+      
+      const dataResponse = await fetch(webhookUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!dataResponse.ok) {
+        console.error('Webhook data fetch failed with status:', dataResponse.status);
+        return null;
+      }
+
+      const dataText = await dataResponse.text();
+
+      if (!dataText || dataText.trim().length === 0) {
+        console.warn('Webhook returned empty data response');
         return null;
       }
 
       try {
-        const data = JSON.parse(text);
-        console.log('Webhook response received:', data);
+        const data = JSON.parse(dataText);
+        console.log('Webhook data fetched successfully:', data);
         return data;
       } catch (parseError) {
-        console.error('Failed to parse webhook response:', parseError);
+        console.error('Failed to parse webhook data response:', parseError);
+        console.error('Raw response:', dataText.substring(0, 200));
         return null;
       }
     } catch (error) {
-      console.error('Webhook trigger error:', error);
+      console.error('Webhook operation error:', error);
       return null;
     }
   };
@@ -177,22 +197,25 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     // Check if webhook is enabled and configured
     if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
       const webhookUrl = clientConfig.integrations.webhook.url;
+      
+      console.log('Starting webhook refresh process...');
 
-      // Trigger webhook and get response in ONE call
+      // Trigger webhook data collection and fetch results
       const webhookData = await triggerWebhook(webhookUrl);
 
       if (webhookData) {
+        console.log('Webhook data received, updating dashboard...');
         updateMetricsFromWebhook(webhookData);
         return;
       }
 
-      console.log('Webhook returned invalid data, falling back to simulated data');
+      console.warn('Webhook failed or returned invalid data, falling back to simulated data');
     } else {
       console.log('Webhook not configured, using simulated data');
     }
 
     // Fallback to simulated data
-    const simulatedData = simulateWebhookData();
+    const simulatedData = await simulateWebhookData(clientKey);
     updateMetricsFromWebhook(simulatedData);
   };
 
@@ -218,7 +241,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       }
       
       // Fallback to simulated data
-      const simulatedData = simulateWebhookData();
+      const simulatedData = await simulateWebhookData(clientKey);
       updateMetricsFromWebhook(simulatedData);
     };
 

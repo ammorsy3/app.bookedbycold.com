@@ -43,6 +43,8 @@ export function RefreshButton({ onRefresh, cooldownSeconds = 60 }: RefreshButton
       setCountdown(cooldownSeconds);
     } catch (error) {
       console.error('Refresh failed:', error);
+      // Still start cooldown even if refresh failed to prevent spam
+      setCountdown(cooldownSeconds);
     } finally {
       setIsRefreshing(false);
     }

@@ -7,9 +7,7 @@ export interface WebhookPayload {
   totalInterested: number;
 }
 
-export async function simulateWebhookData(clientKey: string): Promise<WebhookPayload> {
-  await new Promise((resolve) => setTimeout(resolve, 800));
-
+export function simulateWebhookData(clientKey?: string): WebhookPayload {
   const baseData = {
     replyCount: 252,
     emailsSentCount: 29209,
@@ -33,7 +31,6 @@ export async function simulateWebhookData(clientKey: string): Promise<WebhookPay
     totalOpportunityValue: variance(baseData.totalOpportunityValue, 20),
     totalInterested: variance(baseData.totalInterested, 12),
   };
-}
 
 export async function fetchWebhookData(webhookUrl: string): Promise<WebhookPayload | null> {
   try {
