@@ -13,14 +13,26 @@ interface EnhancedOverviewProps {
   clientKey: string;
 }
 
+interface DailyAnalytics {
+  date: string;
+  sent: number;
+  opened: number;
+  unique_opened: number;
+  replies: number;
+  unique_replies: number;
+  clicks: number;
+  unique_clicks: number;
+}
+
+interface WebhookSummary {
+  totalLeadsContacted: string;
+  totalOpportunities: string;
+  totaloOpportunitiesValue: string;
+}
+
 interface WebhookResponse {
-  reply_count?: string | number;
-  reply_count_unique?: string | number;
-  emails_sent_count?: string | number;
-  new_leads_contacted_count?: string | number;
-  total_opportunities?: string | number;
-  total_opportunity_value?: string | number;
-  total_interested?: string | number;
+  dailyData: DailyAnalytics[];
+  summary: WebhookSummary;
 }
 
 export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
@@ -48,58 +60,95 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       }
 
       const text = await response.text();
-      
-      // Check if response is valid JSON
-      let data;
+      console.log('Raw webhook text:', text.substring(0, 200));
+
+      let rawData;
       try {
-        data = JSON.parse(text);
+        rawData = JSON.parse(text);
       } catch (jsonError) {
-        console.error('Webhook response is not valid JSON:', text);
+        // Handle malformed JSON: {\n [array] \n {object} \n}
+        // Try to extract the array and object manually
+        try {
+          const arrayMatch = text.match(/\[\s*\{[\s\S]*?\}\s*\]/);
+          const objectMatch = text.match(/\{\s*"totalLeadsContacted"[\s\S]*?\}/);
+
+          if (arrayMatch && objectMatch) {
+            const dailyData = JSON.parse(arrayMatch[0]) as DailyAnalytics[];
+            const summary = JSON.parse(objectMatch[0]) as WebhookSummary;
+            console.log('Parsed malformed JSON successfully');
+            return { dailyData, summary };
+          }
+        } catch (parseError) {
+          console.error('Failed to parse malformed JSON:', parseError);
+        }
+        console.error('Webhook response is not valid JSON:', text.substring(0, 100));
         return null;
       }
-      
-      console.log('Raw webhook response:', data);
-      console.log('Field types:', {
-        reply_count: typeof data.reply_count,
-        emails_sent_count: typeof data.emails_sent_count,
-        new_leads_contacted_count: typeof data.new_leads_contacted_count,
-        total_opportunities: typeof data.total_opportunities,
-        total_opportunity_value: typeof data.total_opportunity_value,
-        total_interested: typeof data.total_interested,
-      });
-      return data;
+
+      // Parse the response structure: array with daily data and summary object
+      if (Array.isArray(rawData) && rawData.length === 2) {
+        const dailyData = rawData[0] as DailyAnalytics[];
+        const summary = rawData[1] as WebhookSummary;
+        console.log('Webhook data parsed (array format):', { dailyData: dailyData.length, summary });
+        return { dailyData, summary };
+      }
+
+      // Fallback: if data is already in correct format
+      if (rawData.dailyData && rawData.summary) {
+        console.log('Webhook data parsed (object format)');
+        return rawData as WebhookResponse;
+      }
+
+      console.warn('Webhook returned unexpected structure');
+      return null;
     } catch (error) {
       console.error('Webhook fetch error:', error);
       return null;
     }
   };
 
-  // Parse and update metrics from webhook data
   const updateMetricsFromWebhook = (webhookData: WebhookResponse) => {
-    // Convert all values to numbers (handles both string and number inputs)
-    const parseNumber = (value: any): number => {
-      if (value === null || value === undefined || value === '') return 0;
-      const parsed = typeof value === 'string' ? parseInt(value, 10) : Number(value);
+    if (!webhookData.dailyData || !Array.isArray(webhookData.dailyData)) {
+      console.warn('Invalid webhook data format');
+      return;
+    }
+
+    // Calculate totals from daily data
+    const totals = webhookData.dailyData.reduce(
+      (acc, day) => ({
+        sent: acc.sent + (day.sent || 0),
+        replies: acc.replies + (day.unique_replies || 0),
+      }),
+      { sent: 0, replies: 0 }
+    );
+
+    const parseNumber = (value: string | number): number => {
+      if (typeof value === 'number') return value;
+      const parsed = parseInt(value, 10);
       return isNaN(parsed) ? 0 : parsed;
     };
 
     const newMetrics = {
-      replyCount: parseNumber(webhookData.reply_count || webhookData.reply_count_unique),
-      emailsSentCount: parseNumber(webhookData.emails_sent_count),
-      newLeadsContactedCount: parseNumber(webhookData.new_leads_contacted_count),
-      totalOpportunities: parseNumber(webhookData.total_opportunities),
-      totalOpportunityValue: parseNumber(webhookData.total_opportunity_value),
-      totalInterested: parseNumber(webhookData.total_opportunities), // Same as opportunities
+      replyCount: totals.replies,
+      emailsSentCount: totals.sent,
+      newLeadsContactedCount: parseNumber(webhookData.summary.totalLeadsContacted),
+      totalOpportunities: parseNumber(webhookData.summary.totalOpportunities),
+      totalOpportunityValue: parseNumber(webhookData.summary.totaloOpportunitiesValue),
+      totalInterested: parseNumber(webhookData.summary.totalOpportunities),
     };
 
     setMetricsData(newMetrics);
 
-    console.log('Dashboard updated with webhook data:', newMetrics);
+    console.log('Dashboard updated:', {
+      dailyDataPoints: webhookData.dailyData.length,
+      summary: webhookData.summary,
+      metrics: newMetrics
+    });
   };
 
-  const triggerWebhook = async (webhookUrl: string): Promise<void> => {
+  const triggerWebhook = async (webhookUrl: string): Promise<WebhookResponse | null> => {
     try {
-      await fetch(webhookUrl, {
+      const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -110,36 +159,76 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
           timestamp: new Date().toISOString(),
         }),
       });
-      console.log('Webhook trigger sent successfully');
+
+      if (!response.ok) {
+        console.error('Webhook trigger failed:', response.status);
+        return null;
+      }
+
+      const text = await response.text();
+      console.log('Webhook response text:', text.substring(0, 200));
+
+      let rawData;
+      try {
+        rawData = JSON.parse(text);
+      } catch (jsonError) {
+        // Handle malformed JSON
+        try {
+          const arrayMatch = text.match(/\[\s*\{[\s\S]*?\}\s*\]/);
+          const objectMatch = text.match(/\{\s*"totalLeadsContacted"[\s\S]*?\}/);
+
+          if (arrayMatch && objectMatch) {
+            const dailyData = JSON.parse(arrayMatch[0]) as DailyAnalytics[];
+            const summary = JSON.parse(objectMatch[0]) as WebhookSummary;
+            console.log('Parsed malformed webhook response successfully');
+            return { dailyData, summary };
+          }
+        } catch (parseError) {
+          console.error('Failed to parse malformed webhook response:', parseError);
+        }
+        console.error('Webhook response is not valid JSON');
+        return null;
+      }
+
+      // Parse array format
+      if (Array.isArray(rawData) && rawData.length === 2) {
+        return { dailyData: rawData[0], summary: rawData[1] };
+      }
+
+      // Parse object format
+      if (rawData.dailyData && rawData.summary) {
+        return rawData as WebhookResponse;
+      }
+
+      console.error('Unexpected webhook response structure');
+      return null;
     } catch (error) {
       console.error('Webhook trigger error:', error);
+      return null;
     }
   };
 
   const handleRefresh = async () => {
     const clientConfig = await getClientConfig(clientKey);
-    
+
     // Check if webhook is enabled and configured
     if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
       const webhookUrl = clientConfig.integrations.webhook.url;
-      
-      await triggerWebhook(webhookUrl);
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const webhookData = await fetchWebhookData(webhookUrl);
-      
+
+      const webhookData = await triggerWebhook(webhookUrl);
+
       if (webhookData) {
         updateMetricsFromWebhook(webhookData);
         return;
       }
-      
+
       console.log('Webhook failed, falling back to simulated data');
     } else {
       console.log('Webhook disabled, using simulated data');
     }
 
     // Fallback to simulated data
-    const simulatedData = simulateWebhookData();
+    const simulatedData = await simulateWebhookData();
     updateMetricsFromWebhook(simulatedData);
   };
 
@@ -165,7 +254,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       }
       
       // Fallback to simulated data
-      const simulatedData = simulateWebhookData();
+      const simulatedData = await simulateWebhookData();
       updateMetricsFromWebhook(simulatedData);
     };
 
@@ -318,6 +407,3 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 }
 
 export default EnhancedOverview;
-
-
-export { EnhancedOverview }
