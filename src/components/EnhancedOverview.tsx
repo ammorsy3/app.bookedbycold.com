@@ -124,9 +124,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
   const triggerWebhook = async (webhookUrl: string): Promise<WebhookResponse | null> => {
     try {
-      const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhook-proxy`;
-
-      // Send POST trigger and wait for response (webhook responds within 5 seconds)
+      // Build payload to send to Make.com webhook
       const payload: any = {
         action: 'refresh_dashboard',
         client_key: clientKey,
@@ -139,19 +137,16 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         payload.endDate = formatDateForWebhook(endDate);
       }
 
-      console.log('🔄 Sending webhook trigger (single POST request):', payload);
+      console.log('🔄 Triggering webhook directly:', webhookUrl);
+      console.log('📦 Payload:', payload);
 
-      const response = await fetch(proxyUrl, {
+      // Send POST request directly to the Make.com webhook
+      const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify({
-          webhookUrl,
-          method: 'POST',
-          payload,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
