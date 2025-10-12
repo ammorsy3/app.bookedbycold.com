@@ -44,61 +44,6 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     return `${year}-${month}-${day}`;
   };
 
-  const fetchWebhookData = async (webhookUrl: string): Promise<WebhookResponse | null> => {
-    try {
-      console.log('Attempting to fetch webhook data from:', webhookUrl);
-
-      const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhook-proxy`;
-
-      const response = await fetch(proxyUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          webhookUrl,
-          method: 'GET',
-        }),
-      });
-
-      if (!response.ok) {
-        console.error('Webhook proxy request failed with status:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
-        return null;
-      }
-
-      const data = await response.json();
-
-      // Validate that we have at least some expected fields
-      if (!data || typeof data !== 'object') {
-        console.warn('Webhook returned invalid data structure');
-        return null;
-      }
-
-      console.log('Webhook data received successfully:', {
-        reply_count: data.reply_count,
-        emails_sent_count: data.emails_sent_count,
-        new_leads_contacted_count: data.new_leads_contacted_count,
-        total_opportunities: data.total_opportunities,
-        total_opportunity_value: data.total_opportunity_value,
-        total_interested: data.total_interested,
-      });
-
-      return data;
-    } catch (error) {
-      console.error('Webhook fetch error details:', {
-        error: error.message,
-        type: error.name,
-        stack: error.stack,
-        url: webhookUrl
-      });
-
-      return null;
-    }
-  };
-
   // Parse and update metrics from webhook data
   const updateMetricsFromWebhook = (webhookData: WebhookResponse) => {
     // Convert all values to numbers (handles both string and number inputs)
@@ -222,13 +167,13 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   useEffect(() => {
     const loadInitialData = async () => {
       console.log('🚀 Loading initial dashboard data...');
-      
+
       const clientConfig = await getClientConfig(clientKey);
-      
+
       // Check if webhook is enabled and configured
       if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
         console.log('🌐 Loading initial webhook data...');
-        const webhookData = await fetchWebhookData(clientConfig.integrations.webhook.url);
+        const webhookData = await triggerWebhook(clientConfig.integrations.webhook.url);
 
         if (webhookData) {
           console.log('✅ Initial webhook data received, updating dashboard...');
