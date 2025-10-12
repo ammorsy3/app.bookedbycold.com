@@ -46,15 +46,21 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
   const fetchWebhookData = async (webhookUrl: string): Promise<WebhookResponse | null> => {
     try {
+      console.log('Attempting to fetch webhook data from:', webhookUrl);
+      
       const response = await fetch(webhookUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
+        mode: 'cors',
+        cache: 'no-cache',
       });
 
       if (!response.ok) {
-        console.error('Webhook request failed with status:', response.status);
+        console.error('Webhook request failed with status:', response.status, response.statusText);
+        console.error('Response headers:', Object.fromEntries(response.headers.entries()));
         return null;
       }
 
@@ -92,7 +98,19 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
       return data;
     } catch (error) {
-      console.error('Webhook fetch error:', error);
+      console.error('Webhook fetch error details:', {
+        error: error.message,
+        type: error.name,
+        stack: error.stack,
+        url: webhookUrl
+      });
+      
+      // Check if it's a CORS error
+      if (error.message.includes('CORS') || error.message.includes('fetch')) {
+        console.warn('CORS error detected. This is common when deploying to custom domains.');
+        console.warn('Make sure your webhook endpoint includes proper CORS headers.');
+      }
+      
       return null;
     }
   };
@@ -127,6 +145,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         action: 'refresh_dashboard',
         client_key: clientKey,
         timestamp: new Date().toISOString(),
+        origin: window.location.origin,
       };
 
       if (startDate && endDate) {
@@ -140,12 +159,16 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
+        mode: 'cors',
+        cache: 'no-cache',
         body: JSON.stringify(payload),
       });
 
       if (!triggerResponse.ok) {
-        console.error('Webhook trigger failed with status:', triggerResponse.status);
+        console.error('Webhook trigger failed with status:', triggerResponse.status, triggerResponse.statusText);
+        console.error('Trigger response headers:', Object.fromEntries(triggerResponse.headers.entries()));
         return null;
       }
 
@@ -161,11 +184,15 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
+        mode: 'cors',
+        cache: 'no-cache',
       });
 
       if (!dataResponse.ok) {
-        console.error('Webhook data fetch failed with status:', dataResponse.status);
+        console.error('Webhook data fetch failed with status:', dataResponse.status, dataResponse.statusText);
+        console.error('Data response headers:', Object.fromEntries(dataResponse.headers.entries()));
         return null;
       }
 
@@ -186,35 +213,55 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         return null;
       }
     } catch (error) {
-      console.error('Webhook operation error:', error);
+      console.error('Webhook operation error details:', {
+        error: error.message,
+        type: error.name,
+        stack: error.stack,
+        url: webhookUrl
+      });
+      
+      // Provide specific guidance for common deployment issues
+      if (error.message.includes('CORS')) {
+        console.error('❌ CORS Error: Your webhook endpoint needs to include these headers:');
+        console.error('   Access-Control-Allow-Origin: *');
+        console.error('   Access-Control-Allow-Methods: GET, POST, OPTIONS');
+        console.error('   Access-Control-Allow-Headers: Content-Type, Accept');
+      } else if (error.message.includes('fetch')) {
+        console.error('❌ Network Error: Check if webhook URL is accessible from your domain');
+      }
+      
       return null;
     }
   };
 
   const handleRefresh = async () => {
+    console.log('🔄 Starting refresh process...');
+    console.log('Current domain:', window.location.origin);
+    
     const clientConfig = await getClientConfig(clientKey);
 
     // Check if webhook is enabled and configured
     if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
       const webhookUrl = clientConfig.integrations.webhook.url;
       
-      console.log('Starting webhook refresh process...');
+      console.log('🌐 Webhook configured:', webhookUrl);
 
       // Trigger webhook data collection and fetch results
       const webhookData = await triggerWebhook(webhookUrl);
 
       if (webhookData) {
-        console.log('Webhook data received, updating dashboard...');
+        console.log('✅ Webhook data received, updating dashboard...');
         updateMetricsFromWebhook(webhookData);
         return;
       }
 
-      console.warn('Webhook failed or returned invalid data, falling back to simulated data');
+      console.warn('⚠️ Webhook failed or returned invalid data, falling back to simulated data');
     } else {
-      console.log('Webhook not configured, using simulated data');
+      console.log('ℹ️ Webhook not configured, using simulated data');
     }
 
     // Fallback to simulated data
+    console.log('📊 Using simulated data for dashboard');
     const simulatedData = await simulateWebhookData(clientKey);
     updateMetricsFromWebhook(simulatedData);
   };
@@ -222,25 +269,28 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   // Fetch initial data on mount
   useEffect(() => {
     const loadInitialData = async () => {
+      console.log('🚀 Loading initial dashboard data...');
+      
       const clientConfig = await getClientConfig(clientKey);
       
       // Check if webhook is enabled and configured
       if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
-        console.log('Loading initial webhook data...');
+        console.log('🌐 Loading initial webhook data...');
         const webhookData = await fetchWebhookData(clientConfig.integrations.webhook.url);
 
         if (webhookData) {
-          console.log('Initial webhook data received, updating dashboard...');
+          console.log('✅ Initial webhook data received, updating dashboard...');
           updateMetricsFromWebhook(webhookData);
           return;
         }
         
-        console.log('Webhook returned invalid data on initial load, falling back to simulated data');
+        console.log('⚠️ Webhook returned invalid data on initial load, falling back to simulated data');
       } else {
-        console.log('Webhook not configured, using simulated data for initial load');
+        console.log('ℹ️ Webhook not configured, using simulated data for initial load');
       }
       
       // Fallback to simulated data
+      console.log('📊 Using simulated data for initial load');
       const simulatedData = await simulateWebhookData(clientKey);
       updateMetricsFromWebhook(simulatedData);
     };
