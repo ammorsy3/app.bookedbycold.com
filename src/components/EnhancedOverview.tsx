@@ -25,7 +25,18 @@ interface DailyAnalytics {
   unique_clicks: number;
 }
 
-type WebhookResponse = DailyAnalytics[];
+interface OverallCampaignAnalytics {
+  reply_count: string | number;
+  emails_sent_count: string | number;
+  new_leads_contacted_count: string | number;
+  total_opportunities: string | number;
+  total_opportunity_value: string | number;
+}
+
+interface WebhookResponse {
+  overAllCampaignAnalytics: OverallCampaignAnalytics;
+  dailyCampaignAnalytics: string;
+}
 
 export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   const [metricsData, setMetricsData] = useState({
@@ -78,16 +89,15 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         return null;
       }
 
-      // Validate that we have array of daily analytics
-      if (!Array.isArray(data)) {
-        console.warn('Webhook returned invalid data structure: expected array');
+      // Validate that we have overAllCampaignAnalytics
+      if (!data || !data.overAllCampaignAnalytics) {
+        console.warn('Webhook returned invalid data structure: expected overAllCampaignAnalytics');
         return null;
       }
 
       console.log('Webhook data received successfully:', {
-        totalDays: data.length,
-        dateRange: data.length > 0 ? `${data[0].date} to ${data[data.length - 1].date}` : 'N/A',
-        sampleDay: data[0],
+        overallAnalytics: data.overAllCampaignAnalytics,
+        hasDailyData: !!data.dailyCampaignAnalytics,
       });
 
       return data;
@@ -97,41 +107,35 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     }
   };
 
-  // Parse and update metrics from webhook data (array of daily analytics)
+  // Parse and update metrics from webhook data (overall campaign analytics)
   const updateMetricsFromWebhook = (webhookData: WebhookResponse) => {
-    if (!Array.isArray(webhookData) || webhookData.length === 0) {
-      console.warn('Invalid webhook data format: expected array of daily analytics');
+    if (!webhookData || !webhookData.overAllCampaignAnalytics) {
+      console.warn('Invalid webhook data format: expected overAllCampaignAnalytics');
       return;
     }
 
-    // Calculate totals by summing all daily values
-    const totals = webhookData.reduce(
-      (acc, day) => ({
-        sent: acc.sent + (day.sent || 0),
-        replies: acc.replies + (day.replies || 0),
-        unique_replies: acc.unique_replies + (day.unique_replies || 0),
-        opened: acc.opened + (day.opened || 0),
-        unique_opened: acc.unique_opened + (day.unique_opened || 0),
-        clicks: acc.clicks + (day.clicks || 0),
-        unique_clicks: acc.unique_clicks + (day.unique_clicks || 0),
-      }),
-      { sent: 0, replies: 0, unique_replies: 0, opened: 0, unique_opened: 0, clicks: 0, unique_clicks: 0 }
-    );
+    const overall = webhookData.overAllCampaignAnalytics;
+
+    // Convert all values to numbers (handles both string and number inputs)
+    const parseNumber = (value: any): number => {
+      if (value === null || value === undefined || value === '') return 0;
+      const parsed = typeof value === 'string' ? parseInt(value, 10) : Number(value);
+      return isNaN(parsed) ? 0 : parsed;
+    };
 
     const newMetrics = {
-      replyCount: totals.unique_replies,
-      emailsSentCount: totals.sent,
-      newLeadsContactedCount: totals.unique_replies,
-      totalOpportunities: 0,
-      totalOpportunityValue: 0,
-      totalInterested: 0,
+      replyCount: parseNumber(overall.reply_count),
+      emailsSentCount: parseNumber(overall.emails_sent_count),
+      newLeadsContactedCount: parseNumber(overall.new_leads_contacted_count),
+      totalOpportunities: parseNumber(overall.total_opportunities),
+      totalOpportunityValue: parseNumber(overall.total_opportunity_value),
+      totalInterested: parseNumber(overall.total_opportunities),
     };
 
     setMetricsData(newMetrics);
 
-    console.log('Dashboard updated with aggregated daily analytics:', {
-      dailyData: webhookData,
-      totals,
+    console.log('Dashboard updated with overall campaign analytics:', {
+      overallData: overall,
       displayMetrics: newMetrics,
     });
   };
