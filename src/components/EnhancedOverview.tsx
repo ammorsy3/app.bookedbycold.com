@@ -120,7 +120,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     console.log('Dashboard updated with webhook data:', newMetrics);
   };
 
-  const triggerWebhook = async (webhookUrl: string): Promise<void> => {
+  const triggerWebhook = async (webhookUrl: string): Promise<WebhookResponse | null> => {
     try {
       const payload: any = {
         action: 'refresh_dashboard',
@@ -135,16 +135,39 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
       console.log('Sending webhook trigger with payload:', payload);
 
-      await fetch(webhookUrl, {
+      const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
       });
+
       console.log('Webhook trigger sent successfully');
+
+      if (!response.ok) {
+        console.error('Webhook request failed with status:', response.status);
+        return null;
+      }
+
+      const text = await response.text();
+
+      if (!text || text.trim().length === 0) {
+        console.warn('Webhook returned empty response');
+        return null;
+      }
+
+      try {
+        const data = JSON.parse(text);
+        console.log('Webhook response received:', data);
+        return data;
+      } catch (parseError) {
+        console.error('Failed to parse webhook response:', parseError);
+        return null;
+      }
     } catch (error) {
       console.error('Webhook trigger error:', error);
+      return null;
     }
   };
 
@@ -155,15 +178,20 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
       const webhookUrl = clientConfig.integrations.webhook.url;
 
-      // Trigger webhook when refresh button is clicked (only ONE webhook call)
-      await triggerWebhook(webhookUrl);
+      // Trigger webhook and get response in ONE call
+      const webhookData = await triggerWebhook(webhookUrl);
 
-      console.log('Webhook trigger sent. Using simulated data for display.');
+      if (webhookData) {
+        updateMetricsFromWebhook(webhookData);
+        return;
+      }
+
+      console.log('Webhook returned invalid data, falling back to simulated data');
     } else {
       console.log('Webhook not configured, using simulated data');
     }
 
-    // Always use simulated data for display
+    // Fallback to simulated data
     const simulatedData = simulateWebhookData();
     updateMetricsFromWebhook(simulatedData);
   };
