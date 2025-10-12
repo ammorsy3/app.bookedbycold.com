@@ -31,6 +31,7 @@ export function simulateWebhookData(clientKey?: string): WebhookPayload {
     totalOpportunityValue: variance(baseData.totalOpportunityValue, 20),
     totalInterested: variance(baseData.totalInterested, 12),
   };
+}
 
 export async function fetchWebhookData(webhookUrl: string): Promise<WebhookPayload | null> {
   try {
