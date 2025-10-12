@@ -35,6 +35,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   });
 
   const [clientConfig, setClientConfig] = useState<any>(null);
+  const [webhookError, setWebhookError] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<Date | null>(new Date('2025-08-06'));
   const [endDate, setEndDate] = useState<Date | null>(new Date());
 
@@ -134,7 +135,8 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         payload.endDate = formatDateForWebhook(endDate);
       }
 
-      console.log('Sending webhook trigger with payload:', payload);
+      console.log('[Webhook] Sending POST request to:', webhookUrl);
+      console.log('[Webhook] Payload:', payload);
 
       const response = await fetch(webhookUrl, {
         method: 'POST',
@@ -144,55 +146,79 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         body: JSON.stringify(payload),
       });
 
-      console.log('Webhook trigger sent successfully');
+      console.log('[Webhook] Response status:', response.status);
+      console.log('[Webhook] Response ok:', response.ok);
 
       if (!response.ok) {
-        console.error('Webhook request failed with status:', response.status);
+        console.error('[Webhook] Request failed with status:', response.status);
+        const errorText = await response.text();
+        console.error('[Webhook] Error response:', errorText);
         return null;
       }
 
       const text = await response.text();
+      console.log('[Webhook] Response text length:', text.length);
+      console.log('[Webhook] Response text:', text.substring(0, 200));
 
       if (!text || text.trim().length === 0) {
-        console.warn('Webhook returned empty response');
+        console.warn('[Webhook] Returned empty response');
         return null;
       }
 
       try {
         const data = JSON.parse(text);
-        console.log('Webhook response received:', data);
+        console.log('[Webhook] Parsed response:', data);
         return data;
       } catch (parseError) {
-        console.error('Failed to parse webhook response:', parseError);
+        console.error('[Webhook] Failed to parse response:', parseError);
+        console.error('[Webhook] Raw text:', text);
         return null;
       }
     } catch (error) {
-      console.error('Webhook trigger error:', error);
+      console.error('[Webhook] Network or fetch error:', error);
+      if (error instanceof Error) {
+        console.error('[Webhook] Error message:', error.message);
+        console.error('[Webhook] Error stack:', error.stack);
+      }
       return null;
     }
   };
 
   const handleRefresh = async () => {
-    const clientConfig = await getClientConfig(clientKey);
+    console.log('[Refresh] Starting refresh process...');
+    console.log('[Refresh] Client key:', clientKey);
+    setWebhookError(null);
+
+    const config = await getClientConfig(clientKey);
+    console.log('[Refresh] Client config loaded:', config?.key);
+    console.log('[Refresh] Webhook enabled:', config?.integrations?.webhook?.enabled);
+    console.log('[Refresh] Webhook URL:', config?.integrations?.webhook?.url);
 
     // Check if webhook is enabled and configured
-    if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
-      const webhookUrl = clientConfig.integrations.webhook.url;
+    if (config?.integrations?.webhook?.enabled && config?.integrations?.webhook?.url) {
+      const webhookUrl = config.integrations.webhook.url;
+      console.log('[Refresh] Calling webhook:', webhookUrl);
 
       // Trigger webhook and get response in ONE call
       const webhookData = await triggerWebhook(webhookUrl);
+      console.log('[Refresh] Webhook response:', webhookData);
 
       if (webhookData) {
+        console.log('[Refresh] Updating metrics with webhook data');
         updateMetricsFromWebhook(webhookData);
+        setWebhookError(null);
         return;
       }
 
-      console.log('Webhook returned invalid data, falling back to simulated data');
+      console.warn('[Refresh] Webhook returned invalid data, falling back to simulated data');
+      setWebhookError('Webhook returned invalid data. Using simulated data.');
     } else {
-      console.log('Webhook not configured, using simulated data');
+      console.warn('[Refresh] Webhook not configured, using simulated data');
+      setWebhookError('Webhook not configured. Using simulated data.');
     }
 
     // Fallback to simulated data
+    console.log('[Refresh] Using simulated data');
     const simulatedData = simulateWebhookData();
     updateMetricsFromWebhook(simulatedData);
   };
@@ -284,6 +310,19 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         </div>
         <RefreshButton onRefresh={handleRefresh} cooldownSeconds={15} />
       </div>
+
+      {webhookError && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <div className="text-yellow-600 mt-0.5">⚠️</div>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-yellow-900 mb-1">Webhook Issue</h3>
+              <p className="text-sm text-yellow-800">{webhookError}</p>
+              <p className="text-xs text-yellow-700 mt-2">Check the browser console for detailed logs.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
         <div className="flex items-center gap-6">
