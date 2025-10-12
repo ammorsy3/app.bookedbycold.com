@@ -231,6 +231,34 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     setEndDate(end);
   };
 
+  const calculateDaysBetween = (start: Date | null, end: Date | null): number => {
+    if (!start || !end) return 0;
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays + 1;
+  };
+
+  const setQuickDateRange = (range: 'last7days' | 'last4weeks' | 'last3months') => {
+    const today = new Date();
+    const end = new Date(today);
+    let start = new Date(today);
+
+    switch (range) {
+      case 'last7days':
+        start.setDate(today.getDate() - 6);
+        break;
+      case 'last4weeks':
+        start.setDate(today.getDate() - 27);
+        break;
+      case 'last3months':
+        start.setMonth(today.getMonth() - 3);
+        break;
+    }
+
+    setStartDate(start);
+    setEndDate(end);
+  };
+
   const quickActions = [
     {
       title: 'CRM Dashboard',
@@ -292,6 +320,26 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Analytics Period
             </label>
+            <div className="flex gap-3 mb-3">
+              <button
+                onClick={() => setQuickDateRange('last7days')}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Last 7 Days
+              </button>
+              <button
+                onClick={() => setQuickDateRange('last4weeks')}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Last 4 Weeks
+              </button>
+              <button
+                onClick={() => setQuickDateRange('last3months')}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Last 3 Months
+              </button>
+            </div>
             <DateRangePicker
               startDate={startDate}
               endDate={endDate}
@@ -302,6 +350,11 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
           <div className="text-sm text-gray-500 mt-7">
             <p>Campaign started: 6 Aug 2025</p>
             <p>Viewing: {startDate && endDate ? `${formatDateForWebhook(startDate)} to ${formatDateForWebhook(endDate)}` : 'All time'}</p>
+            {startDate && endDate && (
+              <p className="text-gray-600 font-medium mt-1">
+                {calculateDaysBetween(startDate, endDate)} days selected
+              </p>
+            )}
           </div>
         </div>
       </div>
