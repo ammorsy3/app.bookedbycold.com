@@ -47,39 +47,29 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   const fetchWebhookData = async (webhookUrl: string): Promise<WebhookResponse | null> => {
     try {
       console.log('Attempting to fetch webhook data from:', webhookUrl);
-      
-      const response = await fetch(webhookUrl, {
-        method: 'GET',
+
+      const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhook-proxy`;
+
+      const response = await fetch(proxyUrl, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        mode: 'cors',
-        cache: 'no-cache',
+        body: JSON.stringify({
+          webhookUrl,
+          method: 'GET',
+        }),
       });
 
       if (!response.ok) {
-        console.error('Webhook request failed with status:', response.status, response.statusText);
-        console.error('Response headers:', Object.fromEntries(response.headers.entries()));
+        console.error('Webhook proxy request failed with status:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
         return null;
       }
 
-      const text = await response.text();
-
-      if (!text || text.trim().length === 0) {
-        console.warn('Webhook returned empty response');
-        return null;
-      }
-
-      // Check if response is valid JSON
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (jsonError) {
-        console.warn('Webhook response is not JSON. Response:', text.substring(0, 100));
-        console.warn('This usually means the webhook endpoint needs to return JSON data with the required fields.');
-        return null;
-      }
+      const data = await response.json();
 
       // Validate that we have at least some expected fields
       if (!data || typeof data !== 'object') {
@@ -104,13 +94,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         stack: error.stack,
         url: webhookUrl
       });
-      
-      // Check if it's a CORS error
-      if (error.message.includes('CORS') || error.message.includes('fetch')) {
-        console.warn('CORS error detected. This is common when deploying to custom domains.');
-        console.warn('Make sure your webhook endpoint includes proper CORS headers.');
-      }
-      
+
       return null;
     }
   };
@@ -140,6 +124,8 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
   const triggerWebhook = async (webhookUrl: string): Promise<WebhookResponse | null> => {
     try {
+      const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhook-proxy`;
+
       // First, send POST trigger to initiate data collection
       const payload: any = {
         action: 'refresh_dashboard',
@@ -155,20 +141,23 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
       console.log('Sending webhook trigger with payload:', payload);
 
-      const triggerResponse = await fetch(webhookUrl, {
+      const triggerResponse = await fetch(proxyUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        mode: 'cors',
-        cache: 'no-cache',
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          webhookUrl,
+          method: 'POST',
+          payload,
+        }),
       });
 
       if (!triggerResponse.ok) {
         console.error('Webhook trigger failed with status:', triggerResponse.status, triggerResponse.statusText);
-        console.error('Trigger response headers:', Object.fromEntries(triggerResponse.headers.entries()));
+        const errorText = await triggerResponse.text();
+        console.error('Error response:', errorText);
         return null;
       }
 
@@ -179,39 +168,29 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
       // Now fetch the processed data with GET request
       console.log('Fetching processed data from webhook...');
-      
-      const dataResponse = await fetch(webhookUrl, {
-        method: 'GET',
+
+      const dataResponse = await fetch(proxyUrl, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        mode: 'cors',
-        cache: 'no-cache',
+        body: JSON.stringify({
+          webhookUrl,
+          method: 'GET',
+        }),
       });
 
       if (!dataResponse.ok) {
         console.error('Webhook data fetch failed with status:', dataResponse.status, dataResponse.statusText);
-        console.error('Data response headers:', Object.fromEntries(dataResponse.headers.entries()));
+        const errorText = await dataResponse.text();
+        console.error('Error response:', errorText);
         return null;
       }
 
-      const dataText = await dataResponse.text();
-
-      if (!dataText || dataText.trim().length === 0) {
-        console.warn('Webhook returned empty data response');
-        return null;
-      }
-
-      try {
-        const data = JSON.parse(dataText);
-        console.log('Webhook data fetched successfully:', data);
-        return data;
-      } catch (parseError) {
-        console.error('Failed to parse webhook data response:', parseError);
-        console.error('Raw response:', dataText.substring(0, 200));
-        return null;
-      }
+      const data = await dataResponse.json();
+      console.log('Webhook data fetched successfully:', data);
+      return data;
     } catch (error) {
       console.error('Webhook operation error details:', {
         error: error.message,
@@ -219,17 +198,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         stack: error.stack,
         url: webhookUrl
       });
-      
-      // Provide specific guidance for common deployment issues
-      if (error.message.includes('CORS')) {
-        console.error('❌ CORS Error: Your webhook endpoint needs to include these headers:');
-        console.error('   Access-Control-Allow-Origin: *');
-        console.error('   Access-Control-Allow-Methods: GET, POST, OPTIONS');
-        console.error('   Access-Control-Allow-Headers: Content-Type, Accept');
-      } else if (error.message.includes('fetch')) {
-        console.error('❌ Network Error: Check if webhook URL is accessible from your domain');
-      }
-      
+
       return null;
     }
   };
