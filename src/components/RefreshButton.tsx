@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 
 interface RefreshButtonProps {
-  onRefresh: () => void;
+  onRefresh: () => Promise<void> | void;
   cooldownSeconds?: number;
 }
 
@@ -30,6 +30,18 @@ export function RefreshButton({ onRefresh, cooldownSeconds = 60 }: RefreshButton
     }
   }, [countdown]);
 
+  const triggerMakeWebhookOnce = async () => {
+    try {
+      await fetch('https://hook.us2.make.com/f36n7r86d2wd8xlq51pwqlbh4koagp8d', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source: 'app.bookedbycold.com', action: 'refresh_click', ts: new Date().toISOString() })
+      });
+    } catch (e) {
+      console.warn('Make.com webhook trigger failed (non-blocking):', e);
+    }
+  };
+
   const handleRefresh = async () => {
     if (countdown > 0 || isRefreshing) return;
 
@@ -39,6 +51,9 @@ export function RefreshButton({ onRefresh, cooldownSeconds = 60 }: RefreshButton
     localStorage.setItem('lastDashboardRefresh', refreshTime.toString());
 
     try {
+      // Fire-and-forget webhook trigger once per click
+      triggerMakeWebhookOnce();
+
       await onRefresh();
       setCountdown(cooldownSeconds);
     } catch (error) {
