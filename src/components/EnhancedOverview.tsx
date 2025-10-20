@@ -7,9 +7,8 @@ import { AutomatedInsights } from './AutomatedInsights';
 import { RefreshButton } from './RefreshButton';
 import { DateRangePicker } from './DateRangePicker';
 import { simulateWebhookData } from '../utils/webhookSimulator';
+import { getClientConfig } from '../clients';
 import { formatCurrency, formatNumber } from '../utils/numberFormatter';
-
-const DASHBOARD_WEBHOOK_URL = 'https://hook.us2.make.com/f36n7r86d2wd8xlq51pwqlbh4koagp8d';
 
 interface EnhancedOverviewProps {
   clientKey: string;
@@ -23,6 +22,7 @@ interface WebhookResponse {
   total_opportunities?: string | number;
   total_opportunity_value?: string | number;
   total_interested?: string | number;
+  response?: string;
 }
 
 export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
@@ -43,6 +43,91 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  };
+
+  const buildWebhookPayload = () => {
+    const webhookPayload: Record<string, any> = {
+      client_key: clientKey,
+      timestamp: new Date().toISOString(),
+      origin: typeof window !== 'undefined' ? window.location.origin : 'unknown',
+    };
+
+    if (startDate && endDate) {
+      webhookPayload.startDate = formatDateForWebhook(startDate);
+      webhookPayload.endDate = formatDateForWebhook(endDate);
+    }
+
+    return webhookPayload;
+  };
+
+  const sendWebhookRequest = async (
+    webhookUrl: string,
+    action: 'fetch_initial_metrics' | 'refresh_dashboard'
+  ): Promise<WebhookResponse | null> => {
+    try {
+      const payload = {
+        action,
+        ...buildWebhookPayload(),
+      };
+
+      console.log(`Attempting to ${action} via webhook:`, webhookUrl);
+      console.log('📦 Payload:', payload);
+
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        console.error('Webhook request failed with status:', response.status, response.statusText);
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error('Error response:', errorText);
+        return null;
+      }
+
+      const responseText = await response.text();
+
+      let data: WebhookResponse = {};
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        data = { response: responseText } as WebhookResponse;
+      }
+
+      if (!data || typeof data !== 'object') {
+        console.warn('Webhook returned invalid data structure');
+        return null;
+      }
+
+      console.log('Webhook data received successfully:', {
+        reply_count: data.reply_count,
+        emails_sent_count: data.emails_sent_count,
+        new_leads_contacted_count: data.new_leads_contacted_count,
+        total_opportunities: data.total_opportunities,
+        total_opportunity_value: data.total_opportunity_value,
+        total_interested: data.total_interested,
+      });
+
+      return data;
+    } catch (error) {
+      console.error('Webhook request error details:', {
+        error: (error as Error).message,
+        type: (error as Error).name,
+        stack: (error as Error).stack,
+        url: webhookUrl,
+      });
+
+      return null;
+    }
+  };
+
+  const fetchWebhookData = async (webhookUrl: string): Promise<WebhookResponse | null> => {
+    return sendWebhookRequest(webhookUrl, 'fetch_initial_metrics');
   };
 
   // Parse and update metrics from webhook data
@@ -70,64 +155,11 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
   const triggerWebhook = async (webhookUrl: string): Promise<WebhookResponse | null> => {
     // Build payload to send to Make.com webhook
-    const webhookPayload: any = {
-      action: 'refresh_dashboard',
-      client_key: clientKey,
-      timestamp: new Date().toISOString(),
-      origin: window.location.origin,
-    };
+    const webhookData = await sendWebhookRequest(webhookUrl, 'refresh_dashboard');
 
-    if (startDate && endDate) {
-      webhookPayload.startDate = formatDateForWebhook(startDate);
-      webhookPayload.endDate = formatDateForWebhook(endDate);
+    if (!webhookData) {
+      throw new Error('Webhook did not return data. Please verify the Make.com scenario is active.');
     }
-
-    console.log('🔄 Triggering webhook:', webhookUrl);
-    console.log('📦 Payload:', webhookPayload);
-
-    // Send to webhook
-    let response;
-    try {
-      response = await fetch(webhookUrl, {
-        method: 'POST',
-        mode: 'cors',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(webhookPayload)
-      });
-    } catch (fetchError) {
-      console.error('Network error:', fetchError);
-      throw new Error(`Network error: Unable to connect to webhook server. Please check if the server is running and accessible.`);
-    }
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Unknown error');
-      console.error('Webhook error response:', response.status, errorText);
-      throw new Error(`Webhook request failed with status ${response.status}: ${response.statusText}. Server response: ${errorText}`);
-    }
-
-    // Parse webhook response as JSON
-    const responseText = await response.text();
-
-    // Parse webhook response
-    let webhookData: WebhookResponse = {};
-    try {
-      webhookData = JSON.parse(responseText);
-    } catch (e) {
-      // If response is not JSON, treat it as plain text
-      webhookData = { response: responseText };
-    }
-
-    console.log('✅ Webhook data received successfully:', {
-      reply_count: webhookData.reply_count,
-      emails_sent_count: webhookData.emails_sent_count,
-      new_leads_contacted_count: webhookData.new_leads_contacted_count,
-      total_opportunities: webhookData.total_opportunities,
-      total_opportunity_value: webhookData.total_opportunity_value,
-      total_interested: webhookData.total_interested,
-    });
 
     return webhookData;
   };
@@ -136,18 +168,27 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     console.log('🔄 Starting refresh process...');
     console.log('Current domain:', window.location.origin);
     
-    console.log('🌐 Using hardcoded webhook URL:', DASHBOARD_WEBHOOK_URL);
+    const clientConfig = await getClientConfig(clientKey);
 
-    // Trigger webhook data collection and fetch results
-    const webhookData = await triggerWebhook(DASHBOARD_WEBHOOK_URL);
+    // Check if webhook is enabled and configured
+    if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
+      const webhookUrl = clientConfig.integrations.webhook.url;
+      
+      console.log('🌐 Webhook configured:', webhookUrl);
 
-    if (webhookData) {
-      console.log('✅ Webhook data received, updating dashboard...');
-      updateMetricsFromWebhook(webhookData);
-      return;
+      // Trigger webhook data collection and fetch results
+      const webhookData = await triggerWebhook(webhookUrl);
+
+      if (webhookData) {
+        console.log('✅ Webhook data received, updating dashboard...');
+        updateMetricsFromWebhook(webhookData);
+        return;
+      }
+
+      console.warn('⚠️ Webhook failed or returned invalid data, falling back to simulated data');
+    } else {
+      console.log('ℹ️ Webhook not configured, using simulated data');
     }
-
-    console.warn('⚠️ Webhook failed or returned invalid data, falling back to simulated data');
 
     // Fallback to simulated data
     console.log('📊 Using simulated data for dashboard');
@@ -159,17 +200,24 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   useEffect(() => {
     const loadInitialData = async () => {
       console.log('🚀 Loading initial dashboard data...');
+      
+      const clientConfig = await getClientConfig(clientKey);
+      
+      // Check if webhook is enabled and configured
+      if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
+        console.log('🌐 Loading initial webhook data...');
+        const webhookData = await fetchWebhookData(clientConfig.integrations.webhook.url);
 
-      console.log('🌐 Loading initial webhook data from hardcoded URL...');
-      const webhookData = await triggerWebhook(DASHBOARD_WEBHOOK_URL);
-
-      if (webhookData) {
-        console.log('✅ Initial webhook data received, updating dashboard...');
-        updateMetricsFromWebhook(webhookData);
-        return;
+        if (webhookData) {
+          console.log('✅ Initial webhook data received, updating dashboard...');
+          updateMetricsFromWebhook(webhookData);
+          return;
+        }
+        
+        console.log('⚠️ Webhook returned invalid data on initial load, falling back to simulated data');
+      } else {
+        console.log('ℹ️ Webhook not configured, using simulated data for initial load');
       }
-
-      console.log('⚠️ Webhook returned invalid data on initial load, falling back to simulated data');
       
       // Fallback to simulated data
       console.log('📊 Using simulated data for initial load');
