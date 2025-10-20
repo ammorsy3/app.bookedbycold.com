@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff, Shield, Mail } from 'lucide-react';
+import PasskeyLogin, { PasskeyAvailabilityIndicator } from './PasskeyLogin';
+import PasskeySetup from './PasskeySetup';
 
 // The 'onAuthenticated' and 'clientName' props are no longer needed
 // as this component now handles redirection itself.
@@ -12,6 +14,8 @@ export default function PasswordProtection() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPasskeySetup, setShowPasskeySetup] = useState(false);
+  const [authenticatedEmail, setAuthenticatedEmail] = useState<string | null>(null);
 
   // All client credentials are in one place.
   // In a real application, you would fetch this from a secure API.
@@ -19,21 +23,28 @@ export default function PasswordProtection() {
     'tlnconsultinggroup': {
       email: 'travis.lairson@tlnconsultinggroup.com',
       password: 'A7med&Travis@TLN',
+      displayName: 'Travis Lairson'
     },
     // Testing credentials for Ahmed
     'testclient': {
       email: 'ahmorsy07@gmail.com',
       password: 'A7med&Do3a',
+      displayName: 'Ahmed Morsy'
     },
     // You can add more clients here in the future
     // 'newclient': {
     //   email: 'contact@newclient.com',
     //   password: 'securepassword123',
+    //   displayName: 'New Client User'
     // }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    authenticateUser(email, password);
+  };
+
+  const authenticateUser = (userEmail: string, userPassword?: string) => {
     setIsLoading(true);
     setError('');
 
@@ -42,7 +53,12 @@ export default function PasswordProtection() {
       // Find which client's credentials match the input
       const clientKey = Object.keys(clientCredentials).find(key => {
         const creds = clientCredentials[key as keyof typeof clientCredentials];
-        return creds.email === email && creds.password === password;
+        // For passkey authentication, only check email
+        if (!userPassword) {
+          return creds.email === userEmail;
+        }
+        // For password authentication, check both email and password
+        return creds.email === userEmail && creds.password === userPassword;
       });
 
       if (clientKey) {
@@ -60,17 +76,64 @@ export default function PasswordProtection() {
           sessionStorage.setItem(storageKey, 'true');
         }
         
-        // Redirect to the client's specific dashboard URL
-        navigate(`/${clientKey}`);
+        // If this was a successful password login, offer to set up passkey
+        if (userPassword) {
+          const credentials = clientCredentials[clientKey as keyof typeof clientCredentials];
+          setAuthenticatedEmail(credentials.email);
+          setShowPasskeySetup(true);
+          // Don't navigate yet, wait for passkey setup decision
+        } else {
+          // Direct navigation for passkey login
+          navigate(`/${clientKey}`);
+        }
 
       } else {
         // If no match is found, show an error
-        setError('Incorrect email or password. Please try again.');
+        if (userPassword) {
+          setError('Incorrect email or password. Please try again.');
+        } else {
+          setError('No account found with this email address.');
+        }
         setPassword('');
       }
 
       setIsLoading(false);
     }, 500);
+  };
+
+  const handlePasskeySuccess = (userEmail: string) => {
+    // Find the client key for this email and authenticate
+    authenticateUser(userEmail);
+  };
+
+  const handlePasskeyError = (errorMessage: string) => {
+    setError(errorMessage);
+  };
+
+  const handlePasskeySetupComplete = () => {
+    setShowPasskeySetup(false);
+    // Now navigate to dashboard
+    const clientKey = Object.keys(clientCredentials).find(key => {
+      const creds = clientCredentials[key as keyof typeof clientCredentials];
+      return creds.email === authenticatedEmail;
+    });
+    
+    if (clientKey) {
+      navigate(`/${clientKey}`);
+    }
+  };
+
+  const handleSkipPasskeySetup = () => {
+    setShowPasskeySetup(false);
+    // Navigate to dashboard without setting up passkey
+    const clientKey = Object.keys(clientCredentials).find(key => {
+      const creds = clientCredentials[key as keyof typeof clientCredentials];
+      return creds.email === authenticatedEmail;
+    });
+    
+    if (clientKey) {
+      navigate(`/${clientKey}`);
+    }
   };
 
   // This component now always renders the unified login form.
@@ -93,6 +156,18 @@ export default function PasswordProtection() {
             <Lock className="w-5 h-5 text-gray-600" />
             <h2 className="text-xl font-semibold text-gray-900">Client Login</h2>
           </div>
+
+          {/* Passkey Availability Indicator */}
+          {email && <PasskeyAvailabilityIndicator userEmail={email} />}
+          
+          {/* Passkey Login Option */}
+          <PasskeyLogin
+            userEmail={email || undefined}
+            onSuccess={handlePasskeySuccess}
+            onError={handlePasskeyError}
+            className="mb-6"
+          />
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Field */}
             <div>
@@ -197,6 +272,16 @@ export default function PasswordProtection() {
           </p>
         </div>
       </div>
+
+      {/* Passkey Setup Modal */}
+      {showPasskeySetup && authenticatedEmail && (
+        <PasskeySetup
+          userEmail={authenticatedEmail}
+          userDisplayName={Object.values(clientCredentials).find(c => c.email === authenticatedEmail)?.displayName || 'User'}
+          onClose={handleSkipPasskeySetup}
+          onSuccess={handlePasskeySetupComplete}
+        />
+      )}
     </div>
   );
 }
