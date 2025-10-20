@@ -28,7 +28,7 @@ export default function PasswordProtection() {
       },
       {
         email: 'katlambright@yahoo.com',
-        password: 'A7med&Kathy@tlnconsultinggroup.com',
+        password: 'A7med&Kathy@TLN',
         displayName: 'Kathy Lambright'
       }
     ],
@@ -40,14 +40,6 @@ export default function PasswordProtection() {
         displayName: 'Ahmed Morsy'
       }
     ],
-    // You can add more clients here in the future
-    // 'newclient': [
-    //   {
-    //     email: 'contact@newclient.com',
-    //     password: 'securepassword123',
-    //     displayName: 'New Client User'
-    //   }
-    // ]
   } as const;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -80,6 +72,10 @@ export default function PasswordProtection() {
         // If a match is found, set authentication state
         const storageKey = `${clientKey}Authenticated`;
         const expiryKey = `${clientKey}AuthExpiry`;
+        const userNameKey = `${clientKey}UserName`;
+
+        // Persist the signed-in user's display name for downstream pages
+        localStorage.setItem(userNameKey, creds.displayName);
 
         if (rememberMe) {
           // Store authentication in localStorage with 96-hour expiry
@@ -95,14 +91,12 @@ export default function PasswordProtection() {
         if (userPassword) {
           setAuthenticatedEmail(creds.email);
           setShowPasskeySetup(true);
-          // Don't navigate yet, wait for passkey setup decision
         } else {
           // Direct navigation for passkey login
           navigate(`/${clientKey}`);
         }
 
       } else {
-        // If no match is found, show an error
         if (userPassword) {
           setError('Incorrect email or password. Please try again.');
         } else {
@@ -116,7 +110,6 @@ export default function PasswordProtection() {
   };
 
   const handlePasskeySuccess = (userEmail: string) => {
-    // Find the client key for this email and authenticate
     authenticateUser(userEmail);
   };
 
@@ -126,7 +119,6 @@ export default function PasswordProtection() {
 
   const handlePasskeySetupComplete = () => {
     setShowPasskeySetup(false);
-    // Now navigate to dashboard
     const match = findClientKeyByEmail(authenticatedEmail || '');
     if (match) navigate(`/${match.key}`);
   };
@@ -137,12 +129,9 @@ export default function PasswordProtection() {
     if (match) navigate(`/${match.key}`);
   };
 
-  // This component now always renders the unified login form.
-  // The generic "Access Your Dashboard" page has been removed.
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center px-6">
       <div className="max-w-md w-full">
-        {/* Generic Header for the main login page */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
             <Shield className="w-8 h-8 text-white" />
@@ -151,17 +140,14 @@ export default function PasswordProtection() {
           <p className="text-blue-200">Client Dashboard Platform</p>
         </div>
 
-        {/* Unified Login Form */}
         <div className="bg-white rounded-xl shadow-2xl p-8">
           <div className="flex items-center gap-3 mb-6">
             <Lock className="w-5 h-5 text-gray-600" />
             <h2 className="text-xl font-semibold text-gray-900">Client Login</h2>
           </div>
 
-          {/* Passkey Availability Indicator */}
           {email && <PasskeyAvailabilityIndicator userEmail={email} />}
           
-          {/* Passkey Login Option */}
           <PasskeyLogin
             userEmail={email || undefined}
             onSuccess={handlePasskeySuccess}
@@ -170,11 +156,8 @@ export default function PasswordProtection() {
           />
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Field */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
               <div className="relative">
                 <input
                   type="email"
@@ -190,11 +173,8 @@ export default function PasswordProtection() {
               </div>
             </div>
 
-            {/* Password Field */}
             <div>
-              <label htmlFor="password" className="block text_sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -227,9 +207,7 @@ export default function PasswordProtection() {
                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                 disabled={isLoading}
               />
-              <label htmlFor="rememberMe" className="ml-2 text-sm text-gray-700">
-                Remember me for 4 days
-              </label>
+              <label htmlFor="rememberMe" className="ml-2 text-sm text-gray-700">Remember me for 4 days</label>
             </div>
 
             {error && (
@@ -258,23 +236,15 @@ export default function PasswordProtection() {
           </form>
 
           <div className="mt-6 pt-6 border-t border-gray-200">
-            <p className="text-xs text-gray-500 text-center">
-              This dashboard contains confidential client information. 
-              <br />
-              Authorized access only.
-            </p>
+            <p className="text-xs text-gray-500 text-center">This dashboard contains confidential client information. <br />Authorized access only.</p>
           </div>
         </div>
 
-        {/* Footer */}
         <div className="text-center mt-8">
-          <p className="text-sm text-blue-200">
-            Powered by BookedByCold • Secure Client Portal
-          </p>
+          <p className="text-sm text-blue-200">Powered by BookedByCold • Secure Client Portal</p>
         </div>
       </div>
 
-      {/* Passkey Setup Modal */}
       {showPasskeySetup && authenticatedEmail && (
         <PasskeySetup
           userEmail={authenticatedEmail}
