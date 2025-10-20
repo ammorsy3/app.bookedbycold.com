@@ -13,7 +13,7 @@ import {
   Outlet,
 } from 'react-router-dom';
 import { NovuUI } from '@novu/js/ui';
-import { FileText, DollarSign, Calendar, Zap, Info, Database, BarChart3, Target } from 'lucide-react';
+import { FileText, DollarSign, Calendar, Zap, Info, Database, BarChart3, Target, Plus, Trash2, CheckCircle2, XCircle } from 'lucide-react';
 import PasswordProtection from './components/PasswordProtection';
 import { EnhancedOverview } from './components/EnhancedOverview';
 
@@ -147,88 +147,122 @@ function Leads() {
   );
 }
 
+// Editable Finance page: add/remove/edit tools, toggle paid, auto-compute Total Due Today
 function Finance() {
-  const items = [
-    { name: 'Make', desc: 'Platforms & AI integration', price: 36.38 },
-    { name: 'Anthropic', desc: 'LLM for email writing', price: 40.0 },
-    { name: 'Perplexity', desc: 'LLM for lead research & personalization', price: 40.0 },
-    { name: 'Sales Navigator', desc: 'Lead generation', price: 119.0, reminder: 'Renews 29 Sep', highlightYellow: true },
-    { name: 'Instantly.ai', desc: 'Cold emailing — hyper-growth plan', price: 97.0, alreadyPaid: true, strikeThrough: true },
-    { name: 'Anymail Finder', desc: 'Lead enrichment', price: 199.0, alreadyPaid: true, strikeThrough: true },
-    { name: 'Email Accounts', desc: '≈1,500 emails/day', price: 240.0, notDueYet: true, due: 'Due 15 Sep', dueSmall: 'Payment can wait' },
+  type Item = { id: string; name: string; desc: string; price: number; reminder?: string; highlightYellow?: boolean; alreadyPaid?: boolean; strikeThrough?: boolean; notDueYet?: boolean; due?: string; dueSmall?: string };
+
+  const STORAGE_KEY = 'tlnFinanceItems';
+
+  const defaultItems: Item[] = [
+    { id: 'make', name: 'Make', desc: 'Platforms & AI integration', price: 36.38 },
+    { id: 'anthropic', name: 'Anthropic', desc: 'LLM for email writing', price: 40.0 },
+    { id: 'perplexity', name: 'Perplexity', desc: 'LLM for lead research & personalization', price: 40.0 },
+    { id: 'salesnav', name: 'Sales Navigator', desc: 'Lead generation', price: 119.0, reminder: 'Renews 29 Sep', highlightYellow: true },
+    { id: 'instantly', name: 'Instantly.ai', desc: 'Cold emailing — hyper-growth plan', price: 97.0, alreadyPaid: true, strikeThrough: true },
+    { id: 'anymail', name: 'Anymail Finder', desc: 'Lead enrichment', price: 199.0, alreadyPaid: true, strikeThrough: true },
+    { id: 'emails', name: 'Email Accounts', desc: '≈1,500 emails/day', price: 240.0, notDueYet: true, due: 'Due 15 Sep', dueSmall: 'Payment can wait' },
   ];
-  const fullTotal = items.reduce((s, i) => s + i.price, 0);
-  const totalDueToday = 116.0;
+
+  const [items, setItems] = useState<Item[]>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return defaultItems;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  }, [items]);
+
+  const addItem = () => {
+    const id = `item_${Date.now()}`;
+    setItems((prev) => [{ id, name: 'New tool', desc: 'Description', price: 0 }, ...prev]);
+  };
+
+  const removeItem = (id: string) => {
+    setItems((prev) => prev.filter((i) => i.id !== id));
+  };
+
+  const updateItem = (id: string, patch: Partial<Item>) => {
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
+  };
+
+  const totalDueToday = items
+    .filter((i) => !i.alreadyPaid && !i.notDueYet)
+    .reduce((s, i) => s + (Number.isFinite(i.price) ? i.price : 0), 0);
+
   return (
     <main className="max-w-7xl mx-auto px-6 py-8">
       <div className="bg-slate-50 border-b border-slate-200 mb-8">
-        <div className="max-w-4xl mx-auto px-6 py-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Terms & Pricing</h1>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-lg text-slate-600">From: <span className="font-semibold text-slate-900">BookedByCold</span></p>
-              <p className="text-lg text-slate-600">To:&nbsp;&nbsp;&nbsp;<span className="font-semibold text-slate-900">TLN Consulting Group</span></p>
-            </div>
-            <p className="text-sm text-slate-500">Date: {new Date().toLocaleDateString()}</p>
+        <div className="max-w-4xl mx-auto px-6 py-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">Terms & Pricing</h1>
+            <p className="text-slate-600">Manage subscriptions and one-off costs below. Toggle paid to exclude from Today's Due.</p>
           </div>
+          <button onClick={addItem} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"><Plus className="w-4 h-4" /> Add Tool</button>
         </div>
       </div>
 
-      <section className="max-w-4xl mx-auto mb-12">
-        <div className="flex items-center gap-3 mb-6"><DollarSign className="w-6 h-6 text-blue-600" /><h2 className="text-2xl font-bold text-slate-900">Pricing Terms</h2></div>
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
-            <div className="flex items-center gap-2 mb-3"><Calendar className="w-5 h-5 text-blue-600" /><h3 className="text-lg font-semibold">Month-to-Month Contract</h3></div>
-            <p className="text-slate-700"><span className="font-semibold">First Month:</span> 20% commission</p>
-            <p className="text-slate-700"><span className="font-semibold">Ongoing:</span> 10%/mo until cancellation</p>
-          </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <div className="flex items-center gap-2 mb-3"><FileText className="w-5 h-5 text-blue-600" /><h3 className="text-lg font-semibold">Long-Term Contract</h3></div>
-            <p className="text-slate-700"><span className="font-semibold">Duration:</span> 3–6 months+</p>
-            <p className="text-slate-700"><span className="font-semibold">Commission:</span> 15% one-time</p>
-          </div>
-        </div>
-      </section>
-
       <section className="max-w-4xl mx-auto">
-        <div className="flex items-center gap-3 mb-6"><Zap className="w-6 h-6 text-green-600" /><h2 className="text-2xl font-bold text-slate-900">Monthly Subscriptions</h2></div>
         <div className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
           <table className="w-full">
             <thead className="bg-slate-100">
               <tr>
                 <th className="text-left py-4 px-6 font-semibold">Service</th>
+                <th className="text-left py-4 px-6 font-semibold">Details</th>
                 <th className="text-right py-4 px-6 font-semibold">Monthly Cost</th>
+                <th className="text-right py-4 px-6 font-semibold">Status</th>
+                <th className="text-right py-4 px-6 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {items.map((item) => (
-                <tr key={item.name} className={[
-                  item.alreadyPaid && 'bg-green-50 border-l-4 border-green-400',
-                  item.highlightYellow && 'bg-yellow-50 border-l-4 border-yellow-400',
-                  item.notDueYet && 'bg-yellow-50 border-l-4 border-yellow-400',
+                <tr key={item.id} className={[
+                  item.alreadyPaid && 'bg-green-50',
+                  item.highlightYellow && 'bg-yellow-50',
                 ].filter(Boolean).join(' ')}>
-                  <td className="py-4 px-6 align-top text-slate-700">
-                    <div className="flex items-center gap-2">
-                      <span>{item.name}</span>
-                      {item.alreadyPaid && <span className="text-green-600">✓</span>}
-                      {(item.notDueYet || item.highlightYellow) && <span className="text-yellow-600">⚠️</span>}
-                    </div>
-                    <span className="text-sm text-slate-500 block">{item.desc}</span>
-                    {item.alreadyPaid && <span className="text-sm text-green-700 block">Already paid</span>}
-                    {item.reminder && <span className="text-xs italic text-slate-500 block">{item.reminder}</span>}
-                    {item.notDueYet && (
-                      <>
-                        <span className="text-sm text-yellow-700 block">{item.due}</span>
-                        <span className="text-xs text-yellow-600 block">{item.dueSmall}</span>
-                      </>
-                    )}
+                  <td className="py-4 px-6 align-top w-[25%]">
+                    <input
+                      value={item.name}
+                      onChange={(e) => updateItem(item.id, { name: e.target.value })}
+                      className="w-full bg-transparent border-b border-dashed border-slate-300 focus:border-blue-500 outline-none"
+                    />
                   </td>
-                  <td className="py-4 px-6 text-right align-top font-semibold">
-                    {item.strikeThrough ? (
-                      <span className="text-slate-500"><s>${item.price.toFixed(2)}</s></span>
-                    ) : (
-                      <>${item.price.toFixed(2)}</>
-                    )}
+                  <td className="py-4 px-6 align-top w-[35%]">
+                    <textarea
+                      value={item.desc}
+                      onChange={(e) => updateItem(item.id, { desc: e.target.value })}
+                      className="w-full bg-transparent border-b border-dashed border-slate-300 focus:border-blue-500 outline-none resize-y"
+                    />
+                    <div className="text-xs text-slate-500 mt-1 flex gap-3">
+                      {item.reminder && <span>Reminder: {item.reminder}</span>}
+                      {item.due && <span>Due: {item.due}</span>}
+                      {item.dueSmall && <span className="italic">{item.dueSmall}</span>}
+                    </div>
+                  </td>
+                  <td className="py-4 px-6 text-right align-top w-[15%]">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={item.price}
+                      onChange={(e) => updateItem(item.id, { price: parseFloat(e.target.value || '0') })}
+                      className="w-28 text-right bg-white border border-slate-300 rounded px-2 py-1 focus:border-blue-500 outline-none"
+                    />
+                  </td>
+                  <td className="py-4 px-6 text-right align-top w-[15%]">
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => updateItem(item.id, { alreadyPaid: !item.alreadyPaid, strikeThrough: !item.strikeThrough })} className={`inline-flex items-center gap-1 px-2 py-1 rounded border ${item.alreadyPaid ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white text-slate-600 border-slate-300'}`}>
+                        {item.alreadyPaid ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />} Paid
+                      </button>
+                      <label className="inline-flex items-center gap-1 text-xs text-slate-600">
+                        <input type="checkbox" checked={!!item.notDueYet} onChange={(e) => updateItem(item.id, { notDueYet: e.target.checked })} />
+                        Not due yet
+                      </label>
+                    </div>
+                  </td>
+                  <td className="py-4 px-6 text-right align-top w-[10%]">
+                    <button onClick={() => removeItem(item.id)} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100"><Trash2 className="w-4 h-4" /> Remove</button>
                   </td>
                 </tr>
               ))}
@@ -236,20 +270,12 @@ function Finance() {
           </table>
         </div>
         <div className="flex flex-col items-end pt-4">
-          <div className="text-slate-500 text-lg"><s>Total: ${fullTotal.toFixed(2)}</s></div>
+          <div className="text-slate-500 text-lg"><s>Total: ${items.reduce((s,i)=>s+(Number.isFinite(i.price)?i.price:0),0).toFixed(2)}</s></div>
           <div className="text-xl font-bold">Total Due Today: ${totalDueToday.toFixed(2)}</div>
         </div>
       </section>
 
-      <section className="max-w-4xl mx-auto mt-8 flex items-start gap-2 text-sm text-slate-600">
-        <Info className="w-4 h-4 mt-0.5 text-blue-600" />
-        <p>Please settle Sales Navigator promptly; Email Accounts isn't due until 15 Sep.</p>
-      </section>
-
-      <footer className="max-w-4xl mx-auto mt-12 pt-8 border-t border-slate-200 text-center">
-        <p className="text-sm text-slate-500">Pricing structure effective immediately per agreed terms.</p>
-        <p className="text-sm text-slate-500 mt-2">Questions? Contact BookedByCold.</p>
-      </footer>
+      <section className="max-w-4xl mx-auto mt-8 flex items-start gap-2 text-sm text-slate-600"><Info className="w-4 h-4 mt-0.5 text-blue-600" /><p>Mark an item as Paid or Not due yet to exclude it from Today's total. Values are saved locally in your browser.</p></section>
     </main>
   );
 }
