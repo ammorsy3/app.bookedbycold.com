@@ -98,7 +98,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   ];
 
   return (
-    <main className="max-w-7xl mx_auto px-6 py-8">
+    <main className="max-w-7xl mx-auto px-6 py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Campaign Performance Dashboard</h2>
