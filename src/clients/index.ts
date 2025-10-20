@@ -1,13 +1,13 @@
 export interface ClientConfig {
   key: string;
   name: string;
-  user: {
+  user?: {
     name: string;
     email: string;
     initials: string;
     timezone: string;
   };
-  credentials: {
+  credentials?: {
     email: string;
     password: string;
   };
@@ -30,22 +30,15 @@ export interface ClientConfig {
 
 export const getClientConfig = async (clientKey: string): Promise<ClientConfig | null> => {
   try {
-    // Support nested keys like "tlnconsultinggroup/travis" and "tlnconsultinggroup/kathy"
-    const clientModule = await import(`./${clientKey}`);
+    // Single company route (Option B)
+    const clientModule = await import(`./${clientKey}/config`);
     return clientModule.default;
   } catch (error) {
-    // Fallback to legacy single-config per company
-    try {
-      const clientModule = await import(`./${clientKey}/config`);
-      return clientModule.default;
-    } catch (err) {
-      console.error(`Failed to load client config for ${clientKey}:`, err);
-      return null;
-    }
+    console.error(`Failed to load client config for ${clientKey}:`, error);
+    return null;
   }
 };
 
 export const getAvailableClients = (): string[] => {
-  // Expose nested user keys, can be extended automatically later
-  return ['tlnconsultinggroup/travis', 'tlnconsultinggroup/kathy'];
+  return ['tlnconsultinggroup'];
 };
