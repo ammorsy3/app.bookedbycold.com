@@ -113,19 +113,11 @@ export default function PasskeyLogin({ userEmail, onSuccess, onError, className 
 
   return (
     <div className={className}>
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-300" />
-        </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white text-gray-500">or</span>
-        </div>
-      </div>
-      
+      {/* Passkey Button */}
       <button
         onClick={handlePasskeyLogin}
         disabled={isAuthenticating}
-        className="mt-4 w-full flex items-center justify-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
+        className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl"
       >
         {isAuthenticating ? (
           <>
@@ -146,6 +138,16 @@ export default function PasskeyLogin({ userEmail, onSuccess, onError, className 
       <p className="mt-2 text-xs text-center text-gray-500">
         Use your fingerprint, face, or device PIN to sign in securely
       </p>
+
+      {/* "Or" Divider */}
+      <div className="relative mt-6">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-300" />
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-2 bg-white text-gray-500">or</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -173,7 +175,7 @@ export function PasskeyAvailabilityIndicator({ userEmail }: { userEmail?: string
   }
 
   return (
-    <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg">
+    <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg mb-4">
       <Fingerprint className="w-4 h-4" />
       <span>Passkey available for quick sign-in</span>
     </div>
