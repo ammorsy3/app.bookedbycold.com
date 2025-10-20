@@ -1,4 +1,4 @@
-/* App.jsx — FINAL VERSION */
+/* App.jsx — FINAL VERSION (Supabase-integrated Finance) */
 import React, { useState, useEffect, useRef } from 'react';
 import { AccountSettings, Support } from './ClientExtras';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate, useLocation, useParams, Outlet } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { NovuUI } from '@novu/js/ui';
 import { FileText, DollarSign, Calendar, Zap, Info, Database, BarChart3, Target, Plus, Trash2, CheckCircle2, Pencil, X } from 'lucide-react';
 import PasswordProtection from './components/PasswordProtection';
 import { EnhancedOverview } from './components/EnhancedOverview';
+import { supabase } from './lib/supabaseClient';
 
 function getDisplayNameForClient(clientKey: string): { name: string; initials: string } {
   const activeName = localStorage.getItem('tlnActiveUserName');
@@ -97,28 +98,66 @@ function Overview() { const { clientKey } = useParams<{ clientKey: string }>(); 
 function CRM() { return (<main className="max-w-7xl mx-auto px-6 py-8"><iframe className="airtable-embed h-[750px] w-full border border-gray-300" title="CRM Airtable" src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrUpnBjEZjhPLJST" frameBorder="0" /></main>); }
 function Leads() { return (<main className="max-w-7xl mx-auto px-6 py-8"><iframe className="airtable-embed h-[750px] w-full border border-gray-300" title="Leads Airtable" src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrvaMOVVXFChOUOo?viewControls=on" frameBorder="0" /></main>); }
 
-// Editable Finance page with Edit mode; remove 'not due yet'—all items are due. Only 'Paid' toggles.
+// Finance with Supabase persistence + realtime
 function Finance() {
-  type Item = { id: string; name: string; desc: string; price: number; reminder?: string; highlightYellow?: boolean; alreadyPaid?: boolean; strikeThrough?: boolean };
-  const STORAGE_KEY = 'tlnFinanceItems';
-  const defaultItems: Item[] = [
-    { id: 'make', name: 'Make', desc: 'Platforms & AI integration', price: 36.38 },
-    { id: 'anthropic', name: 'Anthropic', desc: 'LLM for email writing', price: 40.0 },
-    { id: 'perplexity', name: 'Perplexity', desc: 'LLM for lead research & personalization', price: 40.0 },
-    { id: 'salesnav', name: 'Sales Navigator', desc: 'Lead generation — Renews 29 Sep', price: 119.0, highlightYellow: true },
-    { id: 'instantly', name: 'Instantly.ai', desc: 'Cold emailing — hyper-growth plan', price: 97.0, alreadyPaid: true, strikeThrough: true },
-    { id: 'anymail', name: 'Anymail Finder', desc: 'Lead enrichment', price: 199.0, alreadyPaid: true, strikeThrough: true },
-    { id: 'emails', name: 'Email Accounts', desc: '≈1,500 emails/day', price: 240.0 },
-  ];
-  const [items, setItems] = useState<Item[]>(() => { try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) return JSON.parse(raw); } catch {} return defaultItems; });
+  type Item = { id: string; name: string; desc: string | null; price: number; already_paid: boolean };
+  const CLIENT_KEY = 'tlnconsultinggroup';
+  const [items, setItems] = useState<Item[]>([]);
   const [isEditing, setIsEditing] = useState(false);
-  useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }, [items]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const addItem = () => { const id = `item_${Date.now()}`; setItems((prev) => [{ id, name: 'New tool', desc: 'Description', price: 0 }, ...prev]); };
-  const removeItem = (id: string) => setItems((prev) => prev.filter((i) => i.id !== id));
-  const updateItem = (id: string, patch: Partial<Item>) => setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
+  // Initial fetch
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase
+        .from('finance_items')
+        .select('id,name,desc,price,already_paid')
+        .eq('client_key', CLIENT_KEY)
+        .order('created_at', { ascending: false });
+      if (error) {
+        setError('Failed to load finance items');
+        console.error(error);
+      } else {
+        setItems((data || []) as Item[]);
+      }
+      setLoading(false);
+    })();
+  }, []);
 
-  const totalDueToday = items.filter((i) => !i.alreadyPaid).reduce((s, i) => s + (Number.isFinite(i.price) ? i.price : 0), 0);
+  // Realtime sync
+  useEffect(() => {
+    const channel = supabase
+      .channel('realtime:finance_items')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_items', filter: `client_key=eq.${CLIENT_KEY}` }, (payload) => {
+        // Optimistic approach: refetch list on any change for consistency
+        supabase
+          .from('finance_items')
+          .select('id,name,desc,price,already_paid')
+          .eq('client_key', CLIENT_KEY)
+          .order('created_at', { ascending: false })
+          .then(({ data }) => setItems((data || []) as Item[]));
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  const addItem = async () => {
+    const { error } = await supabase.from('finance_items').insert({ client_key: CLIENT_KEY, name: 'New tool', desc: 'Description', price: 0, already_paid: false });
+    if (error) { setError('Failed to add item'); console.error(error); }
+  };
+
+  const removeItem = async (id: string) => {
+    const { error } = await supabase.from('finance_items').delete().eq('id', id);
+    if (error) { setError('Failed to remove item'); console.error(error); }
+  };
+
+  const updateItem = async (id: string, patch: Partial<Item>) => {
+    const { error } = await supabase.from('finance_items').update(patch).eq('id', id);
+    if (error) { setError('Failed to update item'); console.error(error); }
+  };
+
+  const totalDueToday = items.filter((i) => !i.already_paid).reduce((s, i) => s + (Number.isFinite(i.price) ? i.price : 0), 0);
 
   return (
     <main className="max-w-7xl mx-auto px-6 py-8">
@@ -126,7 +165,7 @@ function Finance() {
         <div className="max-w-4xl mx-auto px-6 py-8 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 mb-1">Finance</h1>
-            <p className="text-slate-600">Track monthly subscriptions and mark items as paid. Click Edit to modify.</p>
+            <p className="text-slate-600">Track monthly subscriptions. Changes sync in real time for the team.</p>
           </div>
           <div className="flex items-center gap-3">
             {isEditing ? (
@@ -142,6 +181,7 @@ function Finance() {
       </div>
 
       <section className="max-w-4xl mx-auto">
+        {error && (<div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">{error}</div>)}
         <div className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
           <table className="w-full">
             <thead className="bg-slate-100">
@@ -154,51 +194,57 @@ function Finance() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {items.map((item) => (
-                <tr key={item.id} className={item.alreadyPaid ? 'bg-green-50' : ''}>
-                  <td className="py-4 px-6 align-top w-[25%]">
-                    {isEditing ? (
-                      <input value={item.name} onChange={(e) => updateItem(item.id, { name: e.target.value })} className="w-full bg-white border border-slate-300 rounded px-2 py-1 focus:border-blue-500 outline-none" />
-                    ) : (
-                      <span className="font-medium text-slate-900">{item.name}</span>
-                    )}
-                  </td>
-                  <td className="py-4 px-6 align-top w-[35%]">
-                    {isEditing ? (
-                      <textarea value={item.desc} onChange={(e) => updateItem(item.id, { desc: e.target.value })} className="w-full bg-white border border-slate-300 rounded px-2 py-1 focus:border-blue-500 outline-none resize-y" />
-                    ) : (
-                      <span className="text-slate-700">{item.desc}</span>
-                    )}
-                  </td>
-                  <td className="py-4 px-6 text-right align-top w-[15%]">
-                    {isEditing ? (
-                      <input type="number" step="0.01" value={item.price} onChange={(e) => updateItem(item.id, { price: parseFloat(e.target.value || '0') })} className="w-28 text-right bg-white border border-slate-300 rounded px-2 py-1 focus:border-blue-500 outline-none" />
-                    ) : (
-                      <span className="font-semibold">${item.price.toFixed(2)}</span>
-                    )}
-                  </td>
-                  <td className="py-4 px-6 text-right align-top w-[15%]">
-                    <button onClick={() => updateItem(item.id, { alreadyPaid: !item.alreadyPaid, strikeThrough: !item.strikeThrough })} className={`inline-flex items-center gap-1 px-3 py-1 rounded border ${item.alreadyPaid ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white text-slate-600 border-slate-300'}`}>
-                      <CheckCircle2 className="w-4 h-4" /> {item.alreadyPaid ? 'Paid' : 'Mark Paid'}
-                    </button>
-                  </td>
-                  {isEditing && (
-                    <td className="py-4 px-6 text-right align-top w-[10%]">
-                      <button onClick={() => removeItem(item.id)} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100"><Trash2 className="w-4 h-4" /> Remove</button>
+              {loading ? (
+                <tr><td colSpan={5} className="py-6 px-6 text-center text-slate-500">Loading...</td></tr>
+              ) : items.length === 0 ? (
+                <tr><td colSpan={5} className="py-6 px-6 text-center text-slate-500">No entries yet. Click Edit → Add to create one.</td></tr>
+              ) : (
+                items.map((item) => (
+                  <tr key={item.id} className={item.already_paid ? 'bg-green-50' : ''}>
+                    <td className="py-4 px-6 align-top w-[25%]">
+                      {isEditing ? (
+                        <input value={item.name} onChange={(e) => updateItem(item.id, { name: e.target.value })} className="w-full bg-white border border-slate-300 rounded px-2 py-1 focus:border-blue-500 outline-none" />
+                      ) : (
+                        <span className="font-medium text-slate-900">{item.name}</span>
+                      )}
                     </td>
-                  )}
-                </tr>
-              ))}
+                    <td className="py-4 px-6 align-top w-[35%]">
+                      {isEditing ? (
+                        <textarea value={item.desc || ''} onChange={(e) => updateItem(item.id, { desc: e.target.value })} className="w-full bg-white border border-slate-300 rounded px-2 py-1 focus:border-blue-500 outline-none resize-y" />
+                      ) : (
+                        <span className="text-slate-700">{item.desc}</span>
+                      )}
+                    </td>
+                    <td className="py-4 px-6 text-right align-top w-[15%]">
+                      {isEditing ? (
+                        <input type="number" step="0.01" value={item.price} onChange={(e) => updateItem(item.id, { price: parseFloat(e.target.value || '0') })} className="w-28 text-right bg-white border border-slate-300 rounded px-2 py-1 focus:border-blue-500 outline-none" />
+                      ) : (
+                        <span className="font-semibold">${Number(item.price).toFixed(2)}</span>
+                      )}
+                    </td>
+                    <td className="py-4 px-6 text-right align-top w-[15%]">
+                      <button onClick={() => updateItem(item.id, { already_paid: !item.already_paid })} className={`inline-flex items-center gap-1 px-3 py-1 rounded border ${item.already_paid ? 'bg-green-100 text-green-700 border-green-300' : 'bg-white text-slate-600 border-slate-300'}`}>
+                        <CheckCircle2 className="w-4 h-4" /> {item.already_paid ? 'Paid' : 'Mark Paid'}
+                      </button>
+                    </td>
+                    {isEditing && (
+                      <td className="py-4 px-6 text-right align-top w-[10%]">
+                        <button onClick={() => removeItem(item.id)} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100"><Trash2 className="w-4 h-4" /> Remove</button>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
         <div className="flex flex-col items-end pt-4">
-          <div className="text-slate-500 text-lg"><s>Total: ${items.reduce((s,i)=>s+(Number.isFinite(i.price)?i.price:0),0).toFixed(2)}</s></div>
+          <div className="text-slate-500 text-lg"><s>Total: ${items.reduce((s,i)=>s+(Number.isFinite(Number(i.price))?Number(i.price):0),0).toFixed(2)}</s></div>
           <div className="text-xl font-bold">Total Due Today: ${totalDueToday.toFixed(2)}</div>
         </div>
       </section>
 
-      <section className="max-w-4xl mx-auto mt-8 flex items-start gap-2 text-sm text-slate-600"><Info className="w-4 h-4 mt-0.5 text-blue-600" /><p>Use Edit to modify services, descriptions, or amounts. Click Paid to exclude an item from Today's total. Changes are saved locally in your browser.</p></section>
+      <section className="max-w-4xl mx-auto mt-8 flex items-start gap-2 text-sm text-slate-600"><Info className="w-4 h-4 mt-0.5 text-blue-600" /><p>Use Edit to modify services, descriptions, or amounts. Click Paid to exclude an item from Today's total. Changes sync instantly across devices.</p></section>
     </main>
   );
 }
