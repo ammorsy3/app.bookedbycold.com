@@ -15,10 +15,14 @@ export default function PasswordProtection() {
   const [showPasskeySetup, setShowPasskeySetup] = useState(false);
   const [authenticatedEmail, setAuthenticatedEmail] = useState<string | null>(null);
 
-  // Per-user client keys (Option A: per-user URLs)
-  const emailToClientKey: Record<string, { key: string; displayName: string; password: string }> = {
-    'travis.lairson@tlnconsultinggroup.com': { key: 'tlnconsultinggroup/travis', displayName: 'Travis Lairson', password: 'A7med&Travis@TLN' },
-    'katlambright@yahoo.com': { key: 'tlnconsultinggroup/kathy', displayName: 'Kathy Lambright', password: 'A7med&Kathy@TLN' },
+  // Option B: Single TLN route; validate credentials and set active user
+  const CLIENT_KEY = 'tlnconsultinggroup';
+  const ACTIVE_NAME_KEY = 'tlnActiveUserName';
+  const ACTIVE_EMAIL_KEY = 'tlnActiveUserEmail';
+
+  const users: Record<string, { displayName: string; password: string }> = {
+    'travis.lairson@tlnconsultinggroup.com': { displayName: 'Travis Lairson', password: 'A7med&Travis@TLN' },
+    'katlambright@yahoo.com': { displayName: 'Kathy Lambright', password: 'A7med&Kathy@TLN' },
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -26,57 +30,60 @@ export default function PasswordProtection() {
     authenticateUser(email, password);
   };
 
+  const setAuthForClient = (remember: boolean) => {
+    const storageKey = `${CLIENT_KEY}Authenticated`;
+    const expiryKey = `${CLIENT_KEY}AuthExpiry`;
+    if (remember) {
+      const expiryTime = Date.now() + 96 * 60 * 60 * 1000;
+      localStorage.setItem(storageKey, 'true');
+      localStorage.setItem(expiryKey, expiryTime.toString());
+    } else {
+      sessionStorage.setItem(storageKey, 'true');
+    }
+  };
+
   const authenticateUser = (userEmail: string, userPassword?: string) => {
     setIsLoading(true);
     setError('');
 
     setTimeout(() => {
-      const mapping = emailToClientKey[userEmail];
-      const valid = mapping && (!userPassword || mapping.password === userPassword);
+      const rec = users[userEmail];
+      const valid = rec && (!userPassword || rec.password === userPassword);
 
-      if (mapping && valid) {
-        // Persist display name for header
-        localStorage.setItem('tlnconsultinggroupUserName', mapping.displayName);
+      if (rec && valid) {
+        localStorage.setItem(ACTIVE_NAME_KEY, rec.displayName);
+        localStorage.setItem(ACTIVE_EMAIL_KEY, userEmail);
+        setAuthForClient(rememberMe);
 
-        // Auth keys must exactly match the per-user clientKey used in route
-        const storageKey = `${mapping.key}Authenticated`;
-        const expiryKey = `${mapping.key}AuthExpiry`;
-
-        if (rememberMe) {
-          const expiryTime = Date.now() + 96 * 60 * 60 * 1000; // 4 days
-          localStorage.setItem(storageKey, 'true');
-          localStorage.setItem(expiryKey, expiryTime.toString());
+        if (userPassword) {
+          setAuthenticatedEmail(userEmail);
+          setShowPasskeySetup(true);
         } else {
-          sessionStorage.setItem(storageKey, 'true');
+          navigate(`/${CLIENT_KEY}/overview`, { replace: true });
         }
-
-        // Navigate to per-user overview (Option A)
-        navigate(`/${mapping.key}/overview`, { replace: true });
       } else {
         setError(userPassword ? 'Incorrect email or password. Please try again.' : 'No account found with this email address.');
         setPassword('');
       }
-
       setIsLoading(false);
     }, 250);
   };
 
   const handlePasskeySuccess = (userEmail: string) => {
-    // For passkey flow, skip password and route using Option A
-    const mapping = emailToClientKey[userEmail];
-    if (mapping) {
-      localStorage.setItem('tlnconsultinggroupUserName', mapping.displayName);
-      const storageKey = `${mapping.key}Authenticated`;
-      sessionStorage.setItem(storageKey, 'true');
-      navigate(`/${mapping.key}/overview`, { replace: true });
+    const rec = users[userEmail];
+    if (rec) {
+      localStorage.setItem(ACTIVE_NAME_KEY, rec.displayName);
+      localStorage.setItem(ACTIVE_EMAIL_KEY, userEmail);
+      setAuthForClient(false);
+      navigate(`/${CLIENT_KEY}/overview`, { replace: true });
     } else {
       setError('No account found with this email address.');
     }
   };
 
-  const handlePasskeyError = (errorMessage: string) => {
-    setError(errorMessage);
-  };
+  const handlePasskeyError = (errorMessage: string) => setError(errorMessage);
+  const handlePasskeySetupComplete = () => { setShowPasskeySetup(false); navigate(`/${CLIENT_KEY}/overview`, { replace: true }); };
+  const handleSkipPasskeySetup = () => { setShowPasskeySetup(false); navigate(`/${CLIENT_KEY}/overview`, { replace: true }); };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center px-6">
@@ -133,7 +140,7 @@ export default function PasswordProtection() {
       </div>
 
       {showPasskeySetup && authenticatedEmail && (
-        <PasskeySetup userEmail={authenticatedEmail} userDisplayName={emailToClientKey[authenticatedEmail].displayName} onClose={()=>{setShowPasskeySetup(false)}} onSuccess={()=>{setShowPasskeySetup(false)}} />
+        <PasskeySetup userEmail={authenticatedEmail} userDisplayName={users[authenticatedEmail].displayName} onClose={handleSkipPasskeySetup} onSuccess={handlePasskeySetupComplete} />
       )}
     </div>
   );
