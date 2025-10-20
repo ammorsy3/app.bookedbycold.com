@@ -20,28 +20,47 @@ export default function PasswordProtection() {
   // All client credentials are in one place.
   // In a real application, you would fetch this from a secure API.
   const clientCredentials = {
-    'tlnconsultinggroup': {
-      email: 'travis.lairson@tlnconsultinggroup.com',
-      password: 'A7med&Travis@TLN',
-      displayName: 'Travis Lairson'
-    },
+    'tlnconsultinggroup': [
+      {
+        email: 'travis.lairson@tlnconsultinggroup.com',
+        password: 'A7med&Travis@TLN',
+        displayName: 'Travis Lairson'
+      },
+      {
+        email: 'katlambright@yahoo.com',
+        password: 'A7med&Kathy@tlnconsultinggroup.com',
+        displayName: 'Kathy Lambright'
+      }
+    ],
     // Testing credentials for Ahmed
-    'testclient': {
-      email: 'ahmorsy07@gmail.com',
-      password: 'A7med&Do3a',
-      displayName: 'Ahmed Morsy'
-    },
+    'testclient': [
+      {
+        email: 'ahmorsy07@gmail.com',
+        password: 'A7med&Do3a',
+        displayName: 'Ahmed Morsy'
+      }
+    ],
     // You can add more clients here in the future
-    // 'newclient': {
-    //   email: 'contact@newclient.com',
-    //   password: 'securepassword123',
-    //   displayName: 'New Client User'
-    // }
-  };
+    // 'newclient': [
+    //   {
+    //     email: 'contact@newclient.com',
+    //     password: 'securepassword123',
+    //     displayName: 'New Client User'
+    //   }
+    // ]
+  } as const;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     authenticateUser(email, password);
+  };
+
+  const findClientKeyByEmail = (userEmail: string): { key: string; user: { email: string; password: string; displayName: string } } | null => {
+    for (const key of Object.keys(clientCredentials)) {
+      const user = (clientCredentials as any)[key].find((u: any) => u.email === userEmail);
+      if (user) return { key, user };
+    }
+    return null;
   };
 
   const authenticateUser = (userEmail: string, userPassword?: string) => {
@@ -50,18 +69,14 @@ export default function PasswordProtection() {
 
     // Simulate an API call
     setTimeout(() => {
-      // Find which client's credentials match the input
-      const clientKey = Object.keys(clientCredentials).find(key => {
-        const creds = clientCredentials[key as keyof typeof clientCredentials];
-        // For passkey authentication, only check email
-        if (!userPassword) {
-          return creds.email === userEmail;
-        }
-        // For password authentication, check both email and password
-        return creds.email === userEmail && creds.password === userPassword;
-      });
+      const match = findClientKeyByEmail(userEmail);
 
-      if (clientKey) {
+      const clientKey = match?.key;
+      const creds = match?.user;
+
+      const valid = creds && (!userPassword || creds.password === userPassword);
+
+      if (clientKey && creds && valid) {
         // If a match is found, set authentication state
         const storageKey = `${clientKey}Authenticated`;
         const expiryKey = `${clientKey}AuthExpiry`;
@@ -78,8 +93,7 @@ export default function PasswordProtection() {
         
         // If this was a successful password login, offer to set up passkey
         if (userPassword) {
-          const credentials = clientCredentials[clientKey as keyof typeof clientCredentials];
-          setAuthenticatedEmail(credentials.email);
+          setAuthenticatedEmail(creds.email);
           setShowPasskeySetup(true);
           // Don't navigate yet, wait for passkey setup decision
         } else {
@@ -113,27 +127,14 @@ export default function PasswordProtection() {
   const handlePasskeySetupComplete = () => {
     setShowPasskeySetup(false);
     // Now navigate to dashboard
-    const clientKey = Object.keys(clientCredentials).find(key => {
-      const creds = clientCredentials[key as keyof typeof clientCredentials];
-      return creds.email === authenticatedEmail;
-    });
-    
-    if (clientKey) {
-      navigate(`/${clientKey}`);
-    }
+    const match = findClientKeyByEmail(authenticatedEmail || '');
+    if (match) navigate(`/${match.key}`);
   };
 
   const handleSkipPasskeySetup = () => {
     setShowPasskeySetup(false);
-    // Navigate to dashboard without setting up passkey
-    const clientKey = Object.keys(clientCredentials).find(key => {
-      const creds = clientCredentials[key as keyof typeof clientCredentials];
-      return creds.email === authenticatedEmail;
-    });
-    
-    if (clientKey) {
-      navigate(`/${clientKey}`);
-    }
+    const match = findClientKeyByEmail(authenticatedEmail || '');
+    if (match) navigate(`/${match.key}`);
   };
 
   // This component now always renders the unified login form.
@@ -191,7 +192,7 @@ export default function PasswordProtection() {
 
             {/* Password Field */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="password" className="block text_sm font-medium text-gray-700 mb-2">
                 Password
               </label>
               <div className="relative">
@@ -277,7 +278,7 @@ export default function PasswordProtection() {
       {showPasskeySetup && authenticatedEmail && (
         <PasskeySetup
           userEmail={authenticatedEmail}
-          userDisplayName={Object.values(clientCredentials).find(c => c.email === authenticatedEmail)?.displayName || 'User'}
+          userDisplayName={findClientKeyByEmail(authenticatedEmail || '')?.user.displayName || 'User'}
           onClose={handleSkipPasskeySetup}
           onSuccess={handlePasskeySetupComplete}
         />
