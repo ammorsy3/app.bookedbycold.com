@@ -74,7 +74,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       console.log('📦 Payload:', payload);
 
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 6000);
+      const timeout = setTimeout(() => controller.abort(), 5500);
 
       const response = await fetch(webhookUrl, {
         method: 'POST',
@@ -85,7 +85,9 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         },
         body: JSON.stringify(payload),
         signal: controller.signal,
-      }).finally(() => clearTimeout(timeout));
+      });
+
+      clearTimeout(timeout);
 
       if (!response.ok) {
         console.error('Webhook request failed with status:', response.status, response.statusText);
@@ -134,9 +136,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     return sendWebhookRequest(webhookUrl, 'fetch_initial_metrics');
   };
 
-  // Parse and update metrics from webhook data
   const updateMetricsFromWebhook = (webhookData: WebhookResponse) => {
-    // Convert all values to numbers (handles both string and number inputs)
     const parseNumber = (value: any): number => {
       if (value === null || value === undefined || value === '') return 0;
       const parsed = typeof value === 'string' ? parseInt(value, 10) : Number(value);
