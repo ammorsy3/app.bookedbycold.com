@@ -134,20 +134,148 @@ function Overview() {
 function CRM() {
   return (
     <main className="max-w-7xl mx-auto px-6 py-8">
-      <iframe
-        className="airtable-embed h-[750px] w-full border border-gray-300"
-        title="CRM Airtable"
-        src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrUpnBjEZjhPLJST"
-        frameBorder="0"
-      />
+      <iframe className="airtable-embed h-[750px] w-full border border-gray-300" title="CRM Airtable" src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrUpnBjEZjhPLJST" frameBorder="0" />
     </main>
   );
 }
 
-function Leads() { return (<main className="max-w-7xl mx-auto px-6 py-8"><iframe className="airtable-embed h-[750px] w-full border border-gray-300" title="Leads Airtable" src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrvaMOVVXFChOUOo?viewControls=on" frameBorder="0" /></main>); }
-function Finance() { return (<main className="max-w-7xl mx-auto px-6 py-8"><div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-10"><h2 className="text-xl font-bold text-gray-900 mb-4">Latest Campaign Report</h2><p className="text-gray-600 mb-6">Download the detailed PDF for this month's campaigns.</p><a href="https://drive.google.com/uc?export=download&id=1Lzrn97Q0fgLgFUoYPnwhLLvSVSDDDqaG" className="inline-flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors" target="_blank" rel="noopener noreferrer">Download PDF<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" /></svg></a></div></main>); }
-function Campaigns() { return (<main className="max-w-7xl mx-auto px-6 py-8"><iframe title="Monthly campaign snapshot" src="https://drive.google.com/file/d/1lbrZudT6pkugTEDPPGG5euqtaqYIjlhh/preview" className="w-full h-[750px] border border-gray-300 rounded-lg" allow="autoplay" /></main>); }
-function Reports() { return (<main className="max-w-7xl mx-auto px-6 py-8"><section className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-10"><h2 className="text-xl font-bold text-gray-900 mb-4">Latest Campaign Report</h2><p className="text-gray-600 mb-6">Download the detailed PDF for this month's campaigns.</p><a href="https://drive.google.com/uc?export=download&id=1Lzrn97Q0fgLgFUoYPnwhLLvSVSDDDqaG" className="inline-flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors" target="_blank" rel="noopener noreferrer">Download PDF<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" /></svg></a></section></main>); }
+function Leads() {
+  return (
+    <main className="max-w-7xl mx-auto px-6 py-8">
+      <iframe className="airtable-embed h-[750px] w-full border border-gray-300" title="Leads Airtable" src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrvaMOVVXFChOUOo?viewControls=on" frameBorder="0" />
+    </main>
+  );
+}
+
+function Finance() {
+  const items = [
+    { name: 'Make', desc: 'Platforms & AI integration', price: 36.38 },
+    { name: 'Anthropic', desc: 'LLM for email writing', price: 40.0 },
+    { name: 'Perplexity', desc: 'LLM for lead research & personalization', price: 40.0 },
+    { name: 'Sales Navigator', desc: 'Lead generation', price: 119.0, reminder: 'Renews 29 Sep', highlightYellow: true },
+    { name: 'Instantly.ai', desc: 'Cold emailing — hyper-growth plan', price: 97.0, alreadyPaid: true, strikeThrough: true },
+    { name: 'Anymail Finder', desc: 'Lead enrichment', price: 199.0, alreadyPaid: true, strikeThrough: true },
+    { name: 'Email Accounts', desc: '≈1,500 emails/day', price: 240.0, notDueYet: true, due: 'Due 15 Sep', dueSmall: 'Payment can wait' },
+  ];
+  const fullTotal = items.reduce((s, i) => s + i.price, 0);
+  const totalDueToday = 116.0;
+  return (
+    <main className="max-w-7xl mx-auto px-6 py-8">
+      <div className="bg-slate-50 border-b border-slate-200 mb-8">
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Terms & Pricing</h1>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-lg text-slate-600">From: <span className="font-semibold text-slate-900">BookedByCold</span></p>
+              <p className="text-lg text-slate-600">To:&nbsp;&nbsp;&nbsp;<span className="font-semibold text-slate-900">TLN Consulting Group</span></p>
+            </div>
+            <p className="text-sm text-slate-500">Date: {new Date().toLocaleDateString()}</p>
+          </div>
+        </div>
+      </div>
+
+      <section className="max-w-4xl mx-auto mb-12">
+        <div className="flex items-center gap-3 mb-6"><DollarSign className="w-6 h-6 text-blue-600" /><h2 className="text-2xl font-bold text-slate-900">Pricing Terms</h2></div>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
+            <div className="flex items-center gap-2 mb-3"><Calendar className="w-5 h-5 text-blue-600" /><h3 className="text-lg font-semibold">Month-to-Month Contract</h3></div>
+            <p className="text-slate-700"><span className="font-semibold">First Month:</span> 20% commission</p>
+            <p className="text-slate-700"><span className="font-semibold">Ongoing:</span> 10%/mo until cancellation</p>
+          </div>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <div className="flex items-center gap-2 mb-3"><FileText className="w-5 h-5 text-blue-600" /><h3 className="text-lg font-semibold">Long-Term Contract</h3></div>
+            <p className="text-slate-700"><span className="font-semibold">Duration:</span> 3–6 months+</p>
+            <p className="text-slate-700"><span className="font-semibold">Commission:</span> 15% one-time</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="max-w-4xl mx-auto">
+        <div className="flex items-center gap-3 mb-6"><Zap className="w-6 h-6 text-green-600" /><h2 className="text-2xl font-bold text-slate-900">Monthly Subscriptions</h2></div>
+        <div className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-slate-100">
+              <tr>
+                <th className="text-left py-4 px-6 font-semibold">Service</th>
+                <th className="text-right py-4 px-6 font-semibold">Monthly Cost</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {items.map((item) => (
+                <tr key={item.name} className={[
+                  item.alreadyPaid && 'bg-green-50 border-l-4 border-green-400',
+                  item.highlightYellow && 'bg-yellow-50 border-l-4 border-yellow-400',
+                  item.notDueYet && 'bg-yellow-50 border-l-4 border-yellow-400',
+                ].filter(Boolean).join(' ')}>
+                  <td className="py-4 px-6 align-top text-slate-700">
+                    <div className="flex items-center gap-2">
+                      <span>{item.name}</span>
+                      {item.alreadyPaid && <span className="text-green-600">✓</span>}
+                      {(item.notDueYet || item.highlightYellow) && <span className="text-yellow-600">⚠️</span>}
+                    </div>
+                    <span className="text-sm text-slate-500 block">{item.desc}</span>
+                    {item.alreadyPaid && <span className="text-sm text-green-700 block">Already paid</span>}
+                    {item.reminder && <span className="text-xs italic text-slate-500 block">{item.reminder}</span>}
+                    {item.notDueYet && (
+                      <>
+                        <span className="text-sm text-yellow-700 block">{item.due}</span>
+                        <span className="text-xs text-yellow-600 block">{item.dueSmall}</span>
+                      </>
+                    )}
+                  </td>
+                  <td className="py-4 px-6 text-right align-top font-semibold">
+                    {item.strikeThrough ? (
+                      <span className="text-slate-500"><s>${item.price.toFixed(2)}</s></span>
+                    ) : (
+                      <>${item.price.toFixed(2)}</>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex flex-col items-end pt-4">
+          <div className="text-slate-500 text-lg"><s>Total: ${fullTotal.toFixed(2)}</s></div>
+          <div className="text-xl font-bold">Total Due Today: ${totalDueToday.toFixed(2)}</div>
+        </div>
+      </section>
+
+      <section className="max-w-4xl mx-auto mt-8 flex items-start gap-2 text-sm text-slate-600">
+        <Info className="w-4 h-4 mt-0.5 text-blue-600" />
+        <p>Please settle Sales Navigator promptly; Email Accounts isn't due until 15 Sep.</p>
+      </section>
+
+      <footer className="max-w-4xl mx-auto mt-12 pt-8 border-t border-slate-200 text-center">
+        <p className="text-sm text-slate-500">Pricing structure effective immediately per agreed terms.</p>
+        <p className="text-sm text-slate-500 mt-2">Questions? Contact BookedByCold.</p>
+      </footer>
+    </main>
+  );
+}
+
+function Campaigns() {
+  return (
+    <main className="max-w-7xl mx-auto px-6 py-8">
+      <iframe title="Monthly campaign snapshot" src="https://drive.google.com/file/d/1lbrZudT6pkugTEDPPGG5euqtaqYIjlhh/preview" className="w-full h-[750px] border border-gray-300 rounded-lg" allow="autoplay" />
+    </main>
+  );
+}
+
+function Reports() {
+  return (
+    <main className="max-w-7xl mx-auto px-6 py-8">
+      <section className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-10">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Latest Campaign Report</h2>
+        <p className="text-gray-600 mb-6">Download the detailed PDF for this month's campaigns.</p>
+        <a href="https://drive.google.com/uc?export=download&id=1Lzrn97Q0fgLgFUoYPnwhLLvSVSDDDqaG" className="inline-flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors" target="_blank" rel="noopener noreferrer">
+          Download PDF
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" /></svg>
+        </a>
+      </section>
+    </main>
+  );
+}
 
 function ProtectedRoute() {
   const { clientKey } = useParams<{ clientKey: string }>();
