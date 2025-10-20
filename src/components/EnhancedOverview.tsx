@@ -74,7 +74,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       console.log('📦 Payload:', payload);
 
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5500); // ~5s timeout
+      const timeout = setTimeout(() => controller.abort(), 6000);
 
       const response = await fetch(webhookUrl, {
         method: 'POST',
@@ -85,9 +85,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         },
         body: JSON.stringify(payload),
         signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
+      }).finally(() => clearTimeout(timeout));
 
       if (!response.ok) {
         console.error('Webhook request failed with status:', response.status, response.statusText);
@@ -151,7 +149,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       newLeadsContactedCount: parseNumber(webhookData.new_leads_contacted_count),
       totalOpportunities: parseNumber(webhookData.total_opportunities),
       totalOpportunityValue: parseNumber(webhookData.total_opportunity_value),
-      totalInterested: parseNumber(webhookData.total_opportunities), // Same as opportunities
+      totalInterested: parseNumber(webhookData.total_opportunities),
     };
 
     setMetricsData(newMetrics);
@@ -175,13 +173,11 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     
     const clientConfig = await getClientConfig(clientKey);
 
-    // Check if webhook is enabled and configured
     if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
       const webhookUrl = clientConfig.integrations.webhook.url;
       
       console.log('🌐 Webhook configured:', webhookUrl);
 
-      // Trigger webhook data collection and fetch results
       const webhookData = await triggerWebhook(webhookUrl);
 
       if (webhookData) {
@@ -195,20 +191,17 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       console.log('ℹ️ Webhook not configured, using simulated data');
     }
 
-    // Fallback to simulated data
     console.log('📊 Using simulated data for dashboard');
     const simulatedData = await simulateWebhookData(clientKey);
     updateMetricsFromWebhook(simulatedData);
   };
 
-  // Fetch initial data on mount
   useEffect(() => {
     const loadInitialData = async () => {
       console.log('🚀 Loading initial dashboard data...');
       
       const clientConfig = await getClientConfig(clientKey);
       
-      // Check if webhook is enabled and configured
       if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
         console.log('🌐 Loading initial webhook data...');
         const webhookData = await fetchWebhookData(clientConfig.integrations.webhook.url);
@@ -224,7 +217,6 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         console.log('ℹ️ Webhook not configured, using simulated data for initial load');
       }
       
-      // Fallback to simulated data
       console.log('📊 Using simulated data for initial load');
       const simulatedData = await simulateWebhookData(clientKey);
       updateMetricsFromWebhook(simulatedData);
