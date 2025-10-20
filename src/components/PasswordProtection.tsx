@@ -15,11 +15,10 @@ export default function PasswordProtection() {
   const [showPasskeySetup, setShowPasskeySetup] = useState(false);
   const [authenticatedEmail, setAuthenticatedEmail] = useState<string | null>(null);
 
-  // Map emails to per-user client keys
+  // Per-user client keys (Option A: per-user URLs)
   const emailToClientKey: Record<string, { key: string; displayName: string; password: string }> = {
     'travis.lairson@tlnconsultinggroup.com': { key: 'tlnconsultinggroup/travis', displayName: 'Travis Lairson', password: 'A7med&Travis@TLN' },
     'katlambright@yahoo.com': { key: 'tlnconsultinggroup/kathy', displayName: 'Kathy Lambright', password: 'A7med&Kathy@TLN' },
-    'ahmorsy07@gmail.com': { key: 'testclient', displayName: 'Ahmed Morsy', password: 'A7med&Do3a' },
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -36,53 +35,47 @@ export default function PasswordProtection() {
       const valid = mapping && (!userPassword || mapping.password === userPassword);
 
       if (mapping && valid) {
+        // Persist display name for header
+        localStorage.setItem('tlnconsultinggroupUserName', mapping.displayName);
+
+        // Auth keys must exactly match the per-user clientKey used in route
         const storageKey = `${mapping.key}Authenticated`;
         const expiryKey = `${mapping.key}AuthExpiry`;
 
-        // Persist per-user display for downstream UI
-        localStorage.setItem('tlnconsultinggroupUserName', mapping.displayName);
-
         if (rememberMe) {
-          const expiryTime = Date.now() + 96 * 60 * 60 * 1000;
+          const expiryTime = Date.now() + 96 * 60 * 60 * 1000; // 4 days
           localStorage.setItem(storageKey, 'true');
           localStorage.setItem(expiryKey, expiryTime.toString());
         } else {
           sessionStorage.setItem(storageKey, 'true');
         }
 
-        if (userPassword) {
-          setAuthenticatedEmail(userEmail);
-          setShowPasskeySetup(true);
-        } else {
-          navigate(`/${mapping.key}`);
-        }
+        // Navigate to per-user overview (Option A)
+        navigate(`/${mapping.key}/overview`, { replace: true });
       } else {
         setError(userPassword ? 'Incorrect email or password. Please try again.' : 'No account found with this email address.');
         setPassword('');
       }
 
       setIsLoading(false);
-    }, 400);
+    }, 250);
   };
 
   const handlePasskeySuccess = (userEmail: string) => {
-    authenticateUser(userEmail);
+    // For passkey flow, skip password and route using Option A
+    const mapping = emailToClientKey[userEmail];
+    if (mapping) {
+      localStorage.setItem('tlnconsultinggroupUserName', mapping.displayName);
+      const storageKey = `${mapping.key}Authenticated`;
+      sessionStorage.setItem(storageKey, 'true');
+      navigate(`/${mapping.key}/overview`, { replace: true });
+    } else {
+      setError('No account found with this email address.');
+    }
   };
 
   const handlePasskeyError = (errorMessage: string) => {
     setError(errorMessage);
-  };
-
-  const handlePasskeySetupComplete = () => {
-    setShowPasskeySetup(false);
-    const mapping = authenticatedEmail ? emailToClientKey[authenticatedEmail] : null;
-    if (mapping) navigate(`/${mapping.key}`);
-  };
-
-  const handleSkipPasskeySetup = () => {
-    setShowPasskeySetup(false);
-    const mapping = authenticatedEmail ? emailToClientKey[authenticatedEmail] : null;
-    if (mapping) navigate(`/${mapping.key}`);
   };
 
   return (
@@ -140,7 +133,7 @@ export default function PasswordProtection() {
       </div>
 
       {showPasskeySetup && authenticatedEmail && (
-        <PasskeySetup userEmail={authenticatedEmail} userDisplayName={emailToClientKey[authenticatedEmail].displayName} onClose={handleSkipPasskeySetup} onSuccess={handlePasskeySetupComplete} />
+        <PasskeySetup userEmail={authenticatedEmail} userDisplayName={emailToClientKey[authenticatedEmail].displayName} onClose={()=>{setShowPasskeySetup(false)}} onSuccess={()=>{setShowPasskeySetup(false)}} />
       )}
     </div>
   );
