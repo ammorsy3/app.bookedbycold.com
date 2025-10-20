@@ -18,13 +18,19 @@ import PasswordProtection from './components/PasswordProtection';
 import { EnhancedOverview } from './components/EnhancedOverview';
 
 function getDisplayNameForClient(clientKey: string): { name: string; initials: string } {
-  // Only TLN is currently split by user
-  const stored = localStorage.getItem('tlnconsultinggroupUserName');
+  // Option B: single TLN route reads active user from localStorage
+  const activeName = localStorage.getItem('tlnActiveUserName');
   let name = 'TLN User';
-  if (clientKey.startsWith('tlnconsultinggroup/')) {
-    if (stored && stored.trim()) name = stored.trim();
+  if (clientKey === 'tlnconsultinggroup') {
+    if (activeName && activeName.trim()) name = activeName.trim();
   }
-  const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U';
+  const initials = name
+    .split(' ')
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'U';
   return { name, initials };
 }
 
@@ -60,7 +66,9 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
     { id: 'finance', label: 'Finance', icon: DollarSign, to: `/${clientKey}/finance` },
     { id: 'reports', label: 'Reports', icon: FileText, to: `/${clientKey}/reports` },
   ];
-  const clientDisplayNames: Record<string, string> = { 'tlnconsultinggroup': 'TLN Consulting Group', 'tlnconsultinggroup/travis': 'TLN Consulting Group', 'tlnconsultinggroup/kathy': 'TLN Consulting Group' };
+  const clientDisplayNames: Record<string, string> = {
+    'tlnconsultinggroup': 'TLN Consulting Group',
+  };
   const clientName = clientDisplayNames[clientKey] || 'Client Dashboard';
   const { name: userName, initials } = getDisplayNameForClient(clientKey);
 
@@ -70,6 +78,9 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
     sessionStorage.removeItem(storageKey);
     localStorage.removeItem(storageKey);
     localStorage.removeItem(expiryKey);
+    // Clear active user on sign out for safety
+    localStorage.removeItem('tlnActiveUserName');
+    localStorage.removeItem('tlnActiveUserEmail');
     navigate('/login');
   };
 
