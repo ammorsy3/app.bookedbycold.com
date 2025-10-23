@@ -84,7 +84,7 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
               <Link key={tab.id} to={tab.to} className={`flex items-center gap-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors ${location.pathname === tab.to ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                 <tab.icon className="w-4 h-4" />{tab.label}
               </Link>
-            ))}">
+            ))}
           </div>
         </nav>
       </header>
@@ -96,7 +96,7 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
 
 function Overview() { const { clientKey } = useParams<{ clientKey: string }>(); return <EnhancedOverview clientKey={clientKey || 'tlnconsultinggroup'} />; }
 function CRM() { return (<main className="max-w-7xl mx-auto px-6 py-8"><iframe className="airtable-embed h-[750px] w-full border border-gray-300" title="CRM Airtable" src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrUpnBjEZjhPLJST" frameBorder="0" /></main>); }
-function Leads() { return (<main className="max-w-7xl mx-auto px-6 py-8"><iframe className="airtable-embed h-[750px] w-full border border-gray-300" title="Leads Airtable" src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrvaMOVVXFChOUOo?viewControls=on" frameBorder="0" /></main>); }
+function Leads() { return (<main className="max-w-7xl mx_auto px-6 py-8"><iframe className="airtable-embed h-[750px] w-full border border-gray-300" title="Leads Airtable" src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrvaMOVVXFChOUOo?viewControls=on" frameBorder="0" /></main>); }
 
 // Finance with Supabase + webhook notifications on Done
 function Finance() {
@@ -132,10 +132,8 @@ function Finance() {
       } else {
         const fetchedItems = (data || []) as Item[];
         if (fetchedItems.length === 0) {
-          // Seed with default items
           const { error: insertError } = await supabase.from('finance_items').insert(defaultItems.map(item => ({ ...item, client_key: CLIENT_KEY })));
           if (!insertError) {
-            // Re-fetch after seeding
             const { data: seededData } = await supabase.from('finance_items').select('id,name,desc,price,already_paid').eq('client_key', CLIENT_KEY).order('created_at', { ascending: false });
             setItems((seededData || []) as Item[]);
           }
@@ -212,7 +210,6 @@ function Finance() {
 
   const handleDone = async () => {
     setIsEditing(false);
-    // Send webhooks for all pending actions
     for (const action of pendingActions) {
       await sendWebhook(action);
     }
@@ -233,7 +230,7 @@ function Finance() {
             {isEditing ? (
               <>
                 <button onClick={addItem} className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"><Plus className="w-4 h-4" /> Add</button>
-                <button onClick={handleDone} className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"><X className="w-4 h-4" /> Done</button>
+                <button onClick={handleDone} className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg">Done</button>
               </>
             ) : (
               <button onClick={() => setIsEditing(true)} className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg"><Pencil className="w-4 h-4" /> Edit</button>
@@ -311,8 +308,8 @@ function Finance() {
   );
 }
 
-function Campaigns() { return (<main className="max-w-7xl mx-auto px-6 py-8"><iframe title="Monthly campaign snapshot" src="https://drive.google.com/file/d/1lbrZudT6pkugTEDPPGG5euqtaqYIjlhh/preview" className="w-full h-[750px] border border-gray-300 rounded-lg" allow="autoplay" /></main>); }
-function Reports() { return (<main className="max-w-7xl mx-auto px-6 py-8"><section className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-10"><h2 className="text-xl font-bold text-gray-900 mb-4">Latest Campaign Report</h2><p className="text-gray-600 mb-6">Download the detailed PDF for this month's campaigns.</p><a href="https://drive.google.com/uc?export=download&id=1Lzrn97Q0fgLgFUoYPnwhLLvSVSDDDqaG" className="inline-flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors" target="_blank" rel="noopener noreferrer">Download PDF<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" /></svg></a></section></main>); }
+function Campaigns() { return (<main className="max-w-7xl mx_auto px-6 py-8"><iframe title="Monthly campaign snapshot" src="https://drive.google.com/file/d/1lbrZudT6pkugTEDPPGG5euqtaqYIjlhh/preview" className="w-full h-[750px] border border-gray-300 rounded-lg" allow="autoplay" /></main>); }
+function Reports() { return (<main className="max-w-7xl mx_auto px-6 py-8"><section className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-10"><h2 className="text-xl font-bold text-gray-900 mb-4">Latest Campaign Report</h2><p className="text-gray-600 mb-6">Download the detailed PDF for this month's campaigns.</p><a href="https://drive.google.com/uc?export=download&id=1Lzrn97Q0fgLgFUoYPnwhLLvSVSDDDqaG" className="inline-flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors" target="_blank" rel="noopener noreferrer">Download PDF<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" /></svg></a></section></main>); }
 
 function ProtectedRoute() { const { clientKey } = useParams<{ clientKey: string }>(); const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null); useEffect(() => { if (!clientKey) { setIsAuthenticated(false); return; } const storageKey = `${clientKey}Authenticated`; const expiryKey = `${clientKey}AuthExpiry`; const sessionAuth = sessionStorage.getItem(storageKey); const localAuth = localStorage.getItem(storageKey); const authExpiry = localStorage.getItem(expiryKey); if (sessionAuth === 'true' || (localAuth === 'true' && authExpiry && Date.now() < Number(authExpiry))) { setIsAuthenticated(true); } else { setIsAuthenticated(false); } }, [clientKey]); if (isAuthenticated === null) return <div>Loading...</div>; return isAuthenticated ? <DashboardLayout clientKey={clientKey!} /> : <Navigate to="/login" replace />; }
 
