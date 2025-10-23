@@ -1,4 +1,4 @@
-/* App.jsx — FINAL VERSION (Supabase-integrated Finance) */
+/* App.jsx — FINAL VERSION (Supabase-integrated Finance with N8n Webhook) */
 import React, { useState, useEffect, useRef } from 'react';
 import { AccountSettings, Support } from './ClientExtras';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate, useLocation, useParams, Outlet } from 'react-router-dom';
@@ -84,7 +84,7 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
               <Link key={tab.id} to={tab.to} className={`flex items-center gap-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors ${location.pathname === tab.to ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
                 <tab.icon className="w-4 h-4" />{tab.label}
               </Link>
-            ))}
+            ))}">
           </div>
         </nav>
       </header>
@@ -98,28 +98,50 @@ function Overview() { const { clientKey } = useParams<{ clientKey: string }>(); 
 function CRM() { return (<main className="max-w-7xl mx-auto px-6 py-8"><iframe className="airtable-embed h-[750px] w-full border border-gray-300" title="CRM Airtable" src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrUpnBjEZjhPLJST" frameBorder="0" /></main>); }
 function Leads() { return (<main className="max-w-7xl mx-auto px-6 py-8"><iframe className="airtable-embed h-[750px] w-full border border-gray-300" title="Leads Airtable" src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrvaMOVVXFChOUOo?viewControls=on" frameBorder="0" /></main>); }
 
-// Finance with Supabase persistence + realtime
+// Finance with Supabase + webhook notifications on Done
 function Finance() {
   type Item = { id: string; name: string; desc: string | null; price: number; already_paid: boolean };
+  type Action = { type: 'insert' | 'update' | 'delete'; item: Item };
+
   const CLIENT_KEY = 'tlnconsultinggroup';
+  const WEBHOOK_URL = 'https://n8n-self-host-9tn6.onrender.com/webhook-test/d65088f1-49c5-4bca-9daf-65d0c3ee2824';
+  
   const [items, setItems] = useState<Item[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingActions, setPendingActions] = useState<Action[]>([]);
 
-  // Initial fetch
+  const defaultItems: Omit<Item, 'id'>[] = [
+    { name: 'Make', desc: 'Platforms & AI integration', price: 36.38, already_paid: false },
+    { name: 'Anthropic', desc: 'LLM for email writing', price: 40.0, already_paid: false },
+    { name: 'Perplexity', desc: 'LLM for lead research & personalization', price: 40.0, already_paid: false },
+    { name: 'Sales Navigator', desc: 'Lead generation — Renews 29 Sep', price: 119.0, already_paid: false },
+    { name: 'Instantly.ai', desc: 'Cold emailing — hyper-growth plan', price: 97.0, already_paid: true },
+    { name: 'Anymail Finder', desc: 'Lead enrichment', price: 199.0, already_paid: true },
+    { name: 'Email Accounts', desc: '≈1,500 emails/day', price: 240.0, already_paid: false },
+  ];
+
+  // Initial fetch and seed if empty
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase
-        .from('finance_items')
-        .select('id,name,desc,price,already_paid')
-        .eq('client_key', CLIENT_KEY)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('finance_items').select('id,name,desc,price,already_paid').eq('client_key', CLIENT_KEY).order('created_at', { ascending: false });
       if (error) {
         setError('Failed to load finance items');
         console.error(error);
       } else {
-        setItems((data || []) as Item[]);
+        const fetchedItems = (data || []) as Item[];
+        if (fetchedItems.length === 0) {
+          // Seed with default items
+          const { error: insertError } = await supabase.from('finance_items').insert(defaultItems.map(item => ({ ...item, client_key: CLIENT_KEY })));
+          if (!insertError) {
+            // Re-fetch after seeding
+            const { data: seededData } = await supabase.from('finance_items').select('id,name,desc,price,already_paid').eq('client_key', CLIENT_KEY).order('created_at', { ascending: false });
+            setItems((seededData || []) as Item[]);
+          }
+        } else {
+          setItems(fetchedItems);
+        }
       }
       setLoading(false);
     })();
@@ -127,34 +149,74 @@ function Finance() {
 
   // Realtime sync
   useEffect(() => {
-    const channel = supabase
-      .channel('realtime:finance_items')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_items', filter: `client_key=eq.${CLIENT_KEY}` }, (payload) => {
-        // Optimistic approach: refetch list on any change for consistency
-        supabase
-          .from('finance_items')
-          .select('id,name,desc,price,already_paid')
-          .eq('client_key', CLIENT_KEY)
-          .order('created_at', { ascending: false })
-          .then(({ data }) => setItems((data || []) as Item[]));
-      })
-      .subscribe();
+    const channel = supabase.channel('realtime:finance_items').on('postgres_changes', { event: '*', schema: 'public', table: 'finance_items', filter: `client_key=eq.${CLIENT_KEY}` }, () => {
+      supabase.from('finance_items').select('id,name,desc,price,already_paid').eq('client_key', CLIENT_KEY).order('created_at', { ascending: false }).then(({ data }) => setItems((data || []) as Item[]));
+    }).subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  const sendWebhook = async (action: Action) => {
+    try {
+      await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actionType: action.type,
+          clientKey: 'TLN Consulting Group',
+          name: action.item.name,
+          description: action.item.desc || '',
+          price: action.item.price.toString(),
+          alreadyPaid: action.item.already_paid ? 'TRUE' : 'FALSE'
+        })
+      });
+    } catch (error) {
+      console.error('Webhook failed:', error);
+    }
+  };
+
   const addItem = async () => {
-    const { error } = await supabase.from('finance_items').insert({ client_key: CLIENT_KEY, name: 'New tool', desc: 'Description', price: 0, already_paid: false });
-    if (error) { setError('Failed to add item'); console.error(error); }
+    const newItem = { client_key: CLIENT_KEY, name: 'New tool', desc: 'Description', price: 0, already_paid: false };
+    const { data, error } = await supabase.from('finance_items').insert([newItem]).select();
+    if (error) {
+      setError('Failed to add item');
+      console.error(error);
+    } else if (data?.[0]) {
+      setPendingActions(prev => [...prev, { type: 'insert', item: data[0] as Item }]);
+    }
   };
 
   const removeItem = async (id: string) => {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
     const { error } = await supabase.from('finance_items').delete().eq('id', id);
-    if (error) { setError('Failed to remove item'); console.error(error); }
+    if (error) {
+      setError('Failed to remove item');
+      console.error(error);
+    } else {
+      setPendingActions(prev => [...prev, { type: 'delete', item }]);
+    }
   };
 
   const updateItem = async (id: string, patch: Partial<Item>) => {
     const { error } = await supabase.from('finance_items').update(patch).eq('id', id);
-    if (error) { setError('Failed to update item'); console.error(error); }
+    if (error) {
+      setError('Failed to update item');
+      console.error(error);
+    } else {
+      const updatedItem = items.find(i => i.id === id);
+      if (updatedItem) {
+        setPendingActions(prev => [...prev, { type: 'update', item: { ...updatedItem, ...patch } }]);
+      }
+    }
+  };
+
+  const handleDone = async () => {
+    setIsEditing(false);
+    // Send webhooks for all pending actions
+    for (const action of pendingActions) {
+      await sendWebhook(action);
+    }
+    setPendingActions([]);
   };
 
   const totalDueToday = items.filter((i) => !i.already_paid).reduce((s, i) => s + (Number.isFinite(i.price) ? i.price : 0), 0);
@@ -171,7 +233,7 @@ function Finance() {
             {isEditing ? (
               <>
                 <button onClick={addItem} className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"><Plus className="w-4 h-4" /> Add</button>
-                <button onClick={() => setIsEditing(false)} className="inline-flex items-center gap-2 px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg"><X className="w-4 h-4" /> Done</button>
+                <button onClick={handleDone} className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"><X className="w-4 h-4" /> Done</button>
               </>
             ) : (
               <button onClick={() => setIsEditing(true)} className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg"><Pencil className="w-4 h-4" /> Edit</button>
@@ -244,7 +306,7 @@ function Finance() {
         </div>
       </section>
 
-      <section className="max-w-4xl mx-auto mt-8 flex items-start gap-2 text-sm text-slate-600"><Info className="w-4 h-4 mt-0.5 text-blue-600" /><p>Use Edit to modify services, descriptions, or amounts. Click Paid to exclude an item from Today's total. Changes sync instantly across devices.</p></section>
+      <section className="max-w-4xl mx-auto mt-8 flex items-start gap-2 text-sm text-slate-600"><Info className="w-4 h-4 mt-0.5 text-blue-600" /><p>Use Edit to modify services, descriptions, or amounts. Click Paid to exclude an item from Today's total. Changes sync instantly and notify via webhook when Done.</p></section>
     </main>
   );
 }
