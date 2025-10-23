@@ -1,4 +1,4 @@
-/* App.jsx — FINAL VERSION (Supabase-integrated Finance with N8n Webhook) */
+/* App.jsx — FINAL VERSION (LocalStorage + N8n Webhook only) */
 import React, { useState, useEffect, useRef } from 'react';
 import { AccountSettings, Support } from './ClientExtras';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate, useLocation, useParams, Outlet } from 'react-router-dom';
@@ -6,7 +6,6 @@ import { NovuUI } from '@novu/js/ui';
 import { FileText, DollarSign, Calendar, Zap, Info, Database, BarChart3, Target, Plus, Trash2, CheckCircle2, Pencil, X } from 'lucide-react';
 import PasswordProtection from './components/PasswordProtection';
 import { EnhancedOverview } from './components/EnhancedOverview';
-import { supabase } from './lib/supabaseClient';
 
 function getDisplayNameForClient(clientKey: string): { name: string; initials: string } {
   const activeName = localStorage.getItem('tlnActiveUserName');
@@ -96,62 +95,50 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
 
 function Overview() { const { clientKey } = useParams<{ clientKey: string }>(); return <EnhancedOverview clientKey={clientKey || 'tlnconsultinggroup'} />; }
 function CRM() { return (<main className="max-w-7xl mx-auto px-6 py-8"><iframe className="airtable-embed h-[750px] w-full border border-gray-300" title="CRM Airtable" src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrUpnBjEZjhPLJST" frameBorder="0" /></main>); }
-function Leads() { return (<main className="max-w-7xl mx_auto px-6 py-8"><iframe className="airtable-embed h-[750px] w-full border border-gray-300" title="Leads Airtable" src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrvaMOVVXFChOUOo?viewControls=on" frameBorder="0" /></main>); }
+function Leads() { return (<main className="max-w-7xl mx-auto px-6 py-8"><iframe className="airtable-embed h-[750px] w-full border border-gray-300" title="Leads Airtable" src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrvaMOVVXFChOUOo?viewControls=on" frameBorder="0" /></main>); }
 
-// Finance with Supabase + webhook notifications on Done
+// Finance with LocalStorage + webhook notifications on Done
 function Finance() {
   type Item = { id: string; name: string; desc: string | null; price: number; already_paid: boolean };
   type Action = { type: 'insert' | 'update' | 'delete'; item: Item };
 
   const CLIENT_KEY = 'tlnconsultinggroup';
   const WEBHOOK_URL = 'https://n8n-self-host-9tn6.onrender.com/webhook-test/d65088f1-49c5-4bca-9daf-65d0c3ee2824';
-  
+  const STORAGE_KEY = 'tlnFinanceItems';
+
   const [items, setItems] = useState<Item[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [pendingActions, setPendingActions] = useState<Action[]>([]);
 
-  const defaultItems: Omit<Item, 'id'>[] = [
-    { name: 'Make', desc: 'Platforms & AI integration', price: 36.38, already_paid: false },
-    { name: 'Anthropic', desc: 'LLM for email writing', price: 40.0, already_paid: false },
-    { name: 'Perplexity', desc: 'LLM for lead research & personalization', price: 40.0, already_paid: false },
-    { name: 'Sales Navigator', desc: 'Lead generation — Renews 29 Sep', price: 119.0, already_paid: false },
-    { name: 'Instantly.ai', desc: 'Cold emailing — hyper-growth plan', price: 97.0, already_paid: true },
-    { name: 'Anymail Finder', desc: 'Lead enrichment', price: 199.0, already_paid: true },
-    { name: 'Email Accounts', desc: '≈1,500 emails/day', price: 240.0, already_paid: false },
-  ];
-
-  // Initial fetch and seed if empty
   useEffect(() => {
-    (async () => {
-      const { data, error } = await supabase.from('finance_items').select('id,name,desc,price,already_paid').eq('client_key', CLIENT_KEY).order('created_at', { ascending: false });
-      if (error) {
-        setError('Failed to load finance items');
-        console.error(error);
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        setItems(JSON.parse(raw));
       } else {
-        const fetchedItems = (data || []) as Item[];
-        if (fetchedItems.length === 0) {
-          const { error: insertError } = await supabase.from('finance_items').insert(defaultItems.map(item => ({ ...item, client_key: CLIENT_KEY })));
-          if (!insertError) {
-            const { data: seededData } = await supabase.from('finance_items').select('id,name,desc,price,already_paid').eq('client_key', CLIENT_KEY).order('created_at', { ascending: false });
-            setItems((seededData || []) as Item[]);
-          }
-        } else {
-          setItems(fetchedItems);
-        }
+        const defaults: Item[] = [
+          { id: 'make', name: 'Make', desc: 'Platforms & AI integration', price: 36.38, already_paid: false },
+          { id: 'anthropic', name: 'Anthropic', desc: 'LLM for email writing', price: 40.0, already_paid: false },
+          { id: 'perplexity', name: 'Perplexity', desc: 'LLM for lead research & personalization', price: 40.0, already_paid: false },
+          { id: 'salesnav', name: 'Sales Navigator', desc: 'Lead generation — Renews 29 Sep', price: 119.0, already_paid: false },
+          { id: 'instantly', name: 'Instantly.ai', desc: 'Cold emailing — hyper-growth plan', price: 97.0, already_paid: true },
+          { id: 'anymail', name: 'Anymail Finder', desc: 'Lead enrichment', price: 199.0, already_paid: true },
+          { id: 'emails', name: 'Email Accounts', desc: '≈1,500 emails/day', price: 240.0, already_paid: false },
+        ];
+        setItems(defaults);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
       }
-      setLoading(false);
-    })();
+    } catch {
+      setError('Failed to read local finance data.');
+    }
+    setLoading(false);
   }, []);
 
-  // Realtime sync
   useEffect(() => {
-    const channel = supabase.channel('realtime:finance_items').on('postgres_changes', { event: '*', schema: 'public', table: 'finance_items', filter: `client_key=eq.${CLIENT_KEY}` }, () => {
-      supabase.from('finance_items').select('id,name,desc,price,already_paid').eq('client_key', CLIENT_KEY).order('created_at', { ascending: false }).then(({ data }) => setItems((data || []) as Item[]));
-    }).subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, []);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  }, [items]);
 
   const sendWebhook = async (action: Action) => {
     try {
@@ -164,48 +151,34 @@ function Finance() {
           name: action.item.name,
           description: action.item.desc || '',
           price: action.item.price.toString(),
-          alreadyPaid: action.item.already_paid ? 'TRUE' : 'FALSE'
-        })
+          alreadyPaid: action.item.already_paid ? 'TRUE' : 'FALSE',
+        }),
       });
-    } catch (error) {
-      console.error('Webhook failed:', error);
+    } catch (e) {
+      console.error('Webhook failed', e);
     }
   };
 
-  const addItem = async () => {
-    const newItem = { client_key: CLIENT_KEY, name: 'New tool', desc: 'Description', price: 0, already_paid: false };
-    const { data, error } = await supabase.from('finance_items').insert([newItem]).select();
-    if (error) {
-      setError('Failed to add item');
-      console.error(error);
-    } else if (data?.[0]) {
-      setPendingActions(prev => [...prev, { type: 'insert', item: data[0] as Item }]);
-    }
+  const addItem = () => {
+    const item: Item = { id: `item_${Date.now()}`, name: 'New tool', desc: 'Description', price: 0, already_paid: false };
+    setItems((prev) => [item, ...prev]);
+    setPendingActions((prev) => [...prev, { type: 'insert', item }]);
   };
 
-  const removeItem = async (id: string) => {
-    const item = items.find(i => i.id === id);
+  const removeItem = (id: string) => {
+    const item = items.find((i) => i.id === id);
     if (!item) return;
-    const { error } = await supabase.from('finance_items').delete().eq('id', id);
-    if (error) {
-      setError('Failed to remove item');
-      console.error(error);
-    } else {
-      setPendingActions(prev => [...prev, { type: 'delete', item }]);
-    }
+    setItems((prev) => prev.filter((i) => i.id !== id));
+    setPendingActions((prev) => [...prev, { type: 'delete', item }]);
   };
 
-  const updateItem = async (id: string, patch: Partial<Item>) => {
-    const { error } = await supabase.from('finance_items').update(patch).eq('id', id);
-    if (error) {
-      setError('Failed to update item');
-      console.error(error);
-    } else {
-      const updatedItem = items.find(i => i.id === id);
-      if (updatedItem) {
-        setPendingActions(prev => [...prev, { type: 'update', item: { ...updatedItem, ...patch } }]);
-      }
-    }
+  const updateItem = (id: string, patch: Partial<Item>) => {
+    let updated: Item | null = null;
+    setItems((prev) => prev.map((i) => {
+      if (i.id === id) { updated = { ...i, ...patch }; return updated; }
+      return i;
+    }));
+    if (updated) setPendingActions((prev) => [...prev, { type: 'update', item: updated! }]);
   };
 
   const handleDone = async () => {
@@ -224,7 +197,7 @@ function Finance() {
         <div className="max-w-4xl mx-auto px-6 py-8 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 mb-1">Finance</h1>
-            <p className="text-slate-600">Track monthly subscriptions. Changes sync in real time for the team.</p>
+            <p className="text-slate-600">Track monthly subscriptions. Changes are saved locally and a webhook is sent when you click Done.</p>
           </div>
           <div className="flex items-center gap-3">
             {isEditing ? (
@@ -303,13 +276,13 @@ function Finance() {
         </div>
       </section>
 
-      <section className="max-w-4xl mx-auto mt-8 flex items-start gap-2 text-sm text-slate-600"><Info className="w-4 h-4 mt-0.5 text-blue-600" /><p>Use Edit to modify services, descriptions, or amounts. Click Paid to exclude an item from Today's total. Changes sync instantly and notify via webhook when Done.</p></section>
+      <section className="max-w-4xl mx-auto mt-8 flex items-start gap-2 text-sm text-slate-600"><Info className="w-4 h-4 mt-0.5 text-blue-600" /><p>Use Edit to modify services, descriptions, or amounts. Click Paid to exclude an item from Today's total. Changes are saved locally and sent to the webhook when Done.</p></section>
     </main>
   );
 }
 
-function Campaigns() { return (<main className="max-w-7xl mx_auto px-6 py-8"><iframe title="Monthly campaign snapshot" src="https://drive.google.com/file/d/1lbrZudT6pkugTEDPPGG5euqtaqYIjlhh/preview" className="w-full h-[750px] border border-gray-300 rounded-lg" allow="autoplay" /></main>); }
-function Reports() { return (<main className="max-w-7xl mx_auto px-6 py-8"><section className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-10"><h2 className="text-xl font-bold text-gray-900 mb-4">Latest Campaign Report</h2><p className="text-gray-600 mb-6">Download the detailed PDF for this month's campaigns.</p><a href="https://drive.google.com/uc?export=download&id=1Lzrn97Q0fgLgFUoYPnwhLLvSVSDDDqaG" className="inline-flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors" target="_blank" rel="noopener noreferrer">Download PDF<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" /></svg></a></section></main>); }
+function Campaigns() { return (<main className="max-w-7xl mx-auto px-6 py-8"><iframe title="Monthly campaign snapshot" src="https://drive.google.com/file/d/1lbrZudT6pkugTEDPPGG5euqtaqYIjlhh/preview" className="w-full h-[750px] border border-gray-300 rounded-lg" allow="autoplay" /></main>); }
+function Reports() { return (<main className="max-w-7xl mx-auto px-6 py-8"><section className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-10"><h2 className="text-xl font-bold text-gray-900 mb-4">Latest Campaign Report</h2><p className="text-gray-600 mb-6">Download the detailed PDF for this month's campaigns.</p><a href="https://drive.google.com/uc?export=download&id=1Lzrn97Q0fgLgFUoYPnwhLLvSVSDDDqaG" className="inline-flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors" target="_blank" rel="noopener noreferrer">Download PDF<svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" /></svg></a></section></main>); }
 
 function ProtectedRoute() { const { clientKey } = useParams<{ clientKey: string }>(); const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null); useEffect(() => { if (!clientKey) { setIsAuthenticated(false); return; } const storageKey = `${clientKey}Authenticated`; const expiryKey = `${clientKey}AuthExpiry`; const sessionAuth = sessionStorage.getItem(storageKey); const localAuth = localStorage.getItem(storageKey); const authExpiry = localStorage.getItem(expiryKey); if (sessionAuth === 'true' || (localAuth === 'true' && authExpiry && Date.now() < Number(authExpiry))) { setIsAuthenticated(true); } else { setIsAuthenticated(false); } }, [clientKey]); if (isAuthenticated === null) return <div>Loading...</div>; return isAuthenticated ? <DashboardLayout clientKey={clientKey!} /> : <Navigate to="/login" replace />; }
 
