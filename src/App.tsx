@@ -103,7 +103,7 @@ function Finance() {
   type Action = { type: 'insert' | 'update' | 'delete'; item: Item; originalItem?: Item };
 
   const CLIENT_KEY = 'tlnconsultinggroup';
-  const WEBHOOK_URL = 'https://n8n-self-host-9tn6.onrender.com/webhook-test/d65088f1-49c5-4bca-9daf-65d0c3ee2824';
+  const WEBHOOK_URL = 'https://n8n-self-host-9tn6.onrender.com/webhook/d65088f1-49c5-4bca-9daf-65d0c3ee2824';
   const STORAGE_KEY = 'tlnFinanceItems';
 
   const [items, setItems] = useState<Item[]>([]);
@@ -141,11 +141,10 @@ function Finance() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items]);
 
-  // Track original state when entering edit mode
   const handleStartEditing = () => {
     setIsEditing(true);
-    setOriginalItems([...items]); // Deep copy for comparison
-    setPendingActions([]); // Clear any stale actions
+    setOriginalItems([...items]);
+    setPendingActions([]);
   };
 
   const sendWebhook = async (action: Action) => {
@@ -158,7 +157,6 @@ function Finance() {
         price: action.item.price.toString(),
         alreadyPaid: action.item.already_paid ? 'TRUE' : 'FALSE',
       };
-      console.log('Sending webhook:', payload);
       await fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -183,24 +181,17 @@ function Finance() {
   };
 
   const updateItem = (id: string, patch: Partial<Item>) => {
-    // Find the current item before update
     const currentItem = items.find(i => i.id === id);
     if (!currentItem) return;
-
-    // Update the item in state
     const updatedItem = { ...currentItem, ...patch };
     setItems((prev) => prev.map((i) => (i.id === id ? updatedItem : i)));
-
-    // Track the action with the updated item data
     setPendingActions((prev) => {
-      // Remove any previous update action for the same item to avoid duplicates
-      const filteredActions = prev.filter(action => !(action.type === 'update' && action.item.id === id));
-      return [...filteredActions, { type: 'update', item: updatedItem }];
+      const filtered = prev.filter(a => !(a.type === 'update' && a.item.id === id));
+      return [...filtered, { type: 'update', item: updatedItem }];
     });
   };
 
   const handleDone = async () => {
-    console.log('Sending', pendingActions.length, 'webhook notifications...');
     setIsEditing(false);
     for (const action of pendingActions) {
       await sendWebhook(action);
