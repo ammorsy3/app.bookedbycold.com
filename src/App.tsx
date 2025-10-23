@@ -97,10 +97,10 @@ function Overview() { const { clientKey } = useParams<{ clientKey: string }>(); 
 function CRM() { return (<main className="max-w-7xl mx-auto px-6 py-8"><iframe className="airtable-embed h-[750px] w-full border border-gray-300" title="CRM Airtable" src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrUpnBjEZjhPLJST" frameBorder="0" /></main>); }
 function Leads() { return (<main className="max-w-7xl mx-auto px-6 py-8"><iframe className="airtable-embed h-[750px] w-full border border-gray-300" title="Leads Airtable" src="https://airtable.com/embed/appdepbMC8HjPr3D9/shrvaMOVVXFChOUOo?viewControls=on" frameBorder="0" /></main>); }
 
-// Finance with LocalStorage + webhook notifications on Done
+// Finance with LocalStorage + webhook tracking per action; send webhooks on Done
 function Finance() {
   type Item = { id: string; name: string; desc: string | null; price: number; already_paid: boolean };
-  type Action = { type: 'insert' | 'update' | 'delete'; item: Item };
+  type Action = { type: 'insert' | 'update' | 'delete'; item: Item; originalItem?: Item };
 
   const CLIENT_KEY = 'tlnconsultinggroup';
   const WEBHOOK_URL = 'https://n8n-self-host-9tn6.onrender.com/webhook-test/d65088f1-49c5-4bca-9daf-65d0c3ee2824';
@@ -111,6 +111,7 @@ function Finance() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [pendingActions, setPendingActions] = useState<Action[]>([]);
+  const [originalItems, setOriginalItems] = useState<Item[]>([]);
 
   useEffect(() => {
     try {
@@ -140,19 +141,28 @@ function Finance() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items]);
 
+  // Track original state when entering edit mode
+  const handleStartEditing = () => {
+    setIsEditing(true);
+    setOriginalItems([...items]); // Deep copy for comparison
+    setPendingActions([]); // Clear any stale actions
+  };
+
   const sendWebhook = async (action: Action) => {
     try {
+      const payload = {
+        actionType: action.type,
+        clientKey: 'TLN Consulting Group',
+        name: action.item.name,
+        description: action.item.desc || '',
+        price: action.item.price.toString(),
+        alreadyPaid: action.item.already_paid ? 'TRUE' : 'FALSE',
+      };
+      console.log('Sending webhook:', payload);
       await fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          actionType: action.type,
-          clientKey: 'TLN Consulting Group',
-          name: action.item.name,
-          description: action.item.desc || '',
-          price: action.item.price.toString(),
-          alreadyPaid: action.item.already_paid ? 'TRUE' : 'FALSE',
-        }),
+        body: JSON.stringify(payload),
       });
     } catch (e) {
       console.error('Webhook failed', e);
@@ -173,20 +183,30 @@ function Finance() {
   };
 
   const updateItem = (id: string, patch: Partial<Item>) => {
-    let updated: Item | null = null;
-    setItems((prev) => prev.map((i) => {
-      if (i.id === id) { updated = { ...i, ...patch }; return updated; }
-      return i;
-    }));
-    if (updated) setPendingActions((prev) => [...prev, { type: 'update', item: updated! }]);
+    // Find the current item before update
+    const currentItem = items.find(i => i.id === id);
+    if (!currentItem) return;
+
+    // Update the item in state
+    const updatedItem = { ...currentItem, ...patch };
+    setItems((prev) => prev.map((i) => (i.id === id ? updatedItem : i)));
+
+    // Track the action with the updated item data
+    setPendingActions((prev) => {
+      // Remove any previous update action for the same item to avoid duplicates
+      const filteredActions = prev.filter(action => !(action.type === 'update' && action.item.id === id));
+      return [...filteredActions, { type: 'update', item: updatedItem }];
+    });
   };
 
   const handleDone = async () => {
+    console.log('Sending', pendingActions.length, 'webhook notifications...');
     setIsEditing(false);
     for (const action of pendingActions) {
       await sendWebhook(action);
     }
     setPendingActions([]);
+    setOriginalItems([]);
   };
 
   const totalDueToday = items.filter((i) => !i.already_paid).reduce((s, i) => s + (Number.isFinite(i.price) ? i.price : 0), 0);
@@ -197,16 +217,16 @@ function Finance() {
         <div className="max-w-4xl mx-auto px-6 py-8 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 mb-1">Finance</h1>
-            <p className="text-slate-600">Track monthly subscriptions. Changes are saved locally and a webhook is sent when you click Done.</p>
+            <p className="text-slate-600">Track monthly subscriptions. Changes are saved locally and sent via webhook when Done.</p>
           </div>
           <div className="flex items-center gap-3">
             {isEditing ? (
               <>
                 <button onClick={addItem} className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"><Plus className="w-4 h-4" /> Add</button>
-                <button onClick={handleDone} className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg">Done</button>
+                <button onClick={handleDone} className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg">Done {pendingActions.length > 0 && <span className="text-xs bg-green-800 px-1 rounded">{pendingActions.length}</span>}</button>
               </>
             ) : (
-              <button onClick={() => setIsEditing(true)} className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg"><Pencil className="w-4 h-4" /> Edit</button>
+              <button onClick={handleStartEditing} className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg"><Pencil className="w-4 h-4" /> Edit</button>
             )}
           </div>
         </div>
@@ -276,7 +296,7 @@ function Finance() {
         </div>
       </section>
 
-      <section className="max-w-4xl mx-auto mt-8 flex items-start gap-2 text-sm text-slate-600"><Info className="w-4 h-4 mt-0.5 text-blue-600" /><p>Use Edit to modify services, descriptions, or amounts. Click Paid to exclude an item from Today's total. Changes are saved locally and sent to the webhook when Done.</p></section>
+      <section className="max-w-4xl mx-auto mt-8 flex items-start gap-2 text-sm text-slate-600"><Info className="w-4 h-4 mt-0.5 text-blue-600" /><p>Use Edit to modify services, descriptions, or amounts. Click Paid to exclude an item from Today's total. Changes are saved locally and sent to webhook when Done.</p></section>
     </main>
   );
 }
