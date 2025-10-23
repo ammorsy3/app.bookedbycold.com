@@ -103,7 +103,7 @@ function Finance() {
   type Action = { type: 'insert' | 'update' | 'delete'; item: Item; originalItem?: Item };
 
   const CLIENT_KEY = 'tlnconsultinggroup';
-  const WEBHOOK_URL = 'https://n8n-self-host-9tn6.onrender.com/webhook/d65088f1-49c5-4bca-9daf-65d0c3ee2824';
+  const WEBHOOK_URL = 'https://n8n-self-host-9tn6.onrender.com/webhook-test/d65088f1-49c5-4bca-9daf-65d0c3ee2824';
   const STORAGE_KEY = 'tlnFinanceItems';
 
   const [items, setItems] = useState<Item[]>([]);
