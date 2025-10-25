@@ -7,7 +7,7 @@ export interface WebhookPayload {
   totalInterested: number;
 }
 
-export function simulateWebhookData(clientKey?: string): WebhookPayload {
+export function simulateWebhookData(): WebhookPayload {
   const baseData = {
     replyCount: 252,
     emailsSentCount: 29209,

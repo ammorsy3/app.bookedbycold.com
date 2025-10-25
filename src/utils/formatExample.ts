@@ -1,4 +1,4 @@
-import { formatWebhookData, WebhookData, formatNumber, formatCurrency } from './numberFormatter';
+import { formatWebhookData, WebhookData } from './numberFormatter';
 
 // Original JSON data
 const originalData: WebhookData = {

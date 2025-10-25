@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { ExternalLink, Database, DollarSign, Target, FileText, BarChart3, TrendingUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ExternalLink, Database, DollarSign, Target, FileText, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { DashboardMetrics } from './DashboardMetrics';
 import { PerformanceCharts } from './PerformanceCharts';
 import { AutomatedInsights } from './AutomatedInsights';
 import { RefreshButton } from './RefreshButton';
 import { DateRangePicker } from './DateRangePicker';
-import { simulateWebhookData } from '../utils/webhookSimulator';
+import { simulateWebhookData, WebhookPayload } from '../utils/webhookSimulator';
 import { getClientConfig } from '../clients';
 import { formatCurrency, formatNumber } from '../utils/numberFormatter';
 
@@ -131,7 +131,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
   };
 
   // Parse and update metrics from webhook data
-  const updateMetricsFromWebhook = (webhookData: WebhookResponse) => {
+  const updateMetricsFromWebhook = (webhookData: WebhookResponse | WebhookPayload) => {
     // Convert all values to numbers (handles both string and number inputs)
     const parseNumber = (value: any): number => {
       if (value === null || value === undefined || value === '') return 0;
@@ -140,12 +140,12 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     };
 
     const newMetrics = {
-      replyCount: parseNumber(webhookData.reply_count || webhookData.reply_count_unique),
-      emailsSentCount: parseNumber(webhookData.emails_sent_count),
-      newLeadsContactedCount: parseNumber(webhookData.new_leads_contacted_count),
-      totalOpportunities: parseNumber(webhookData.total_opportunities),
-      totalOpportunityValue: parseNumber(webhookData.total_opportunity_value),
-      totalInterested: parseNumber(webhookData.total_opportunities), // Same as opportunities
+      replyCount: parseNumber('replyCount' in webhookData ? webhookData.replyCount : webhookData.reply_count || webhookData.reply_count_unique),
+      emailsSentCount: parseNumber('emailsSentCount' in webhookData ? webhookData.emailsSentCount : webhookData.emails_sent_count),
+      newLeadsContactedCount: parseNumber('newLeadsContactedCount' in webhookData ? webhookData.newLeadsContactedCount : webhookData.new_leads_contacted_count),
+      totalOpportunities: parseNumber('totalOpportunities' in webhookData ? webhookData.totalOpportunities : webhookData.total_opportunities),
+      totalOpportunityValue: parseNumber('totalOpportunityValue' in webhookData ? webhookData.totalOpportunityValue : webhookData.total_opportunity_value),
+      totalInterested: parseNumber('totalInterested' in webhookData ? webhookData.totalInterested : webhookData.total_opportunities), // Same as opportunities
     };
 
     setMetricsData(newMetrics);
@@ -192,7 +192,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
     // Fallback to simulated data
     console.log('📊 Using simulated data for dashboard');
-    const simulatedData = await simulateWebhookData(clientKey);
+    const simulatedData = await simulateWebhookData();
     updateMetricsFromWebhook(simulatedData);
   };
 
@@ -221,7 +221,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       
       // Fallback to simulated data
       console.log('📊 Using simulated data for initial load');
-      const simulatedData = await simulateWebhookData(clientKey);
+      const simulatedData = await simulateWebhookData();
       updateMetricsFromWebhook(simulatedData);
     };
 
@@ -365,7 +365,6 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
 
       <div className="space-y-8">
         <DashboardMetrics
-          clientKey={clientKey}
           metrics={{
             ...metricsData,
             lastUpdated: new Date().toISOString()

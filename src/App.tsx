@@ -1,5 +1,5 @@
 /* App.jsx — FINAL VERSION */
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AccountSettings, Support } from './ClientExtras';
 import {
   BrowserRouter as Router,
@@ -20,12 +20,8 @@ import {
   Zap,
   Info,
   Database,
-  TrendingUp,
   BarChart3,
-  ExternalLink,
-  Activity,
   Target,
-  CreditCard,
 } from 'lucide-react';
 import PasswordProtection from './components/PasswordProtection';
 import { EnhancedOverview } from './components/EnhancedOverview';
@@ -75,8 +71,9 @@ function SupportButton() {
 function NovuInbox({ subscriberId }: { subscriberId: string }) {
   const inboxRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    const componentElement = inboxRef.current;
     // Return early if the ref isn't attached or if there's no subscriberId
-    if (!inboxRef.current || !subscriberId) return;
+    if (!componentElement || !subscriberId) return;
     const novu = new NovuUI({
       options: {
         // THE PRODUCTION KEY IDENTIFIER
@@ -87,22 +84,13 @@ function NovuInbox({ subscriberId }: { subscriberId: string }) {
     });
     novu.mountComponent({
       name: 'Inbox',
-      element: inboxRef.current,
+      element: componentElement,
     });
     // Cleanup when the component unmounts or the subscriberId changes
-    return () => novu?.unmountComponent?.();
+    return () => novu?.unmountComponent?.({ name: 'Inbox', element: componentElement });
   // Add subscriberId to the dependency array to re-initialize if it changes
   }, [subscriberId]); 
   return <div id="notification-inbox" ref={inboxRef} />;
-}
-/* ---------- Last-Updated Stamp ---------- */
-function LastUpdated({ date = '9/7/2025, 6:37 PM 🌜' }) {
-  return (
-    <p className="text-right text-xs text-gray-500 mt-1">
-      Date:&nbsp;
-      <time dateTime="2025-09-07">{date}</time>
-    </p>
-  );
 }
 
 
@@ -123,12 +111,7 @@ function DashboardLayout({ clientKey }: { clientKey: string }) {
     'tlnconsultinggroup': 'TLN Consulting Group',
   };
   const clientName = clientDisplayNames[clientKey] || 'Client Dashboard';
-  const notifications = [
-    { id: 1, message: 'New lead from LinkedIn campaign', time: '5 min ago', unread: true },
-    { id: 2, message: 'Email campaign completed',        time: '1 h ago',   unread: true },
-    { id: 3, message: 'Payment processed successfully',  time: '2 h ago',   unread: false },
-  ];
-  const unreadCount = notifications.filter((n) => n.unread).length;
+
   const handleSignOut = () => {
     const storageKey = `${clientKey}Authenticated`;
     const expiryKey = `${clientKey}AuthExpiry`;

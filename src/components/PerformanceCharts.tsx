@@ -1,4 +1,3 @@
-import React from 'react';
 import { TrendingUp, Target, DollarSign, Activity } from 'lucide-react';
 
 interface ChartData {
@@ -63,7 +62,7 @@ export function PerformanceCharts({ data }: PerformanceChartsProps) {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-bold text-gray-900 mb-6">Conversion Funnel</h3>
         <div className="space-y-4">
-          {conversionFunnel.map((stage, index) => (
+          {conversionFunnel.map((stage) => (
             <div key={stage.stage}>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700">{stage.stage}</span>
