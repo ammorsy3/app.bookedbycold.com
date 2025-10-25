@@ -47,9 +47,6 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         ...buildWebhookPayload(),
       };
 
-      console.log(`Attempting to ${action} via webhook:`, webhookUrl);
-      console.log('📦 Payload:', payload);
-
       const response = await fetch(webhookUrl, {
         method: 'POST',
         mode: 'cors',
@@ -61,7 +58,6 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       });
 
       if (!response.ok) {
-        console.error('Webhook request failed with status:', response.status, response.statusText);
         const errorText = await response.text().catch(() => 'Unknown error');
         console.error('Error response:', errorText);
         return null;
@@ -72,7 +68,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       let data: WebhookResponse = {};
       try {
         data = JSON.parse(responseText);
-      } catch (parseError) {
+      } catch (parseError: any) {
         data = { response: responseText } as WebhookResponse;
       }
 
@@ -81,21 +77,12 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
         return null;
       }
 
-      console.log('Webhook data received successfully:', {
-        reply_count: data.reply_count,
-        emails_sent_count: data.emails_sent_count,
-        new_leads_contacted_count: data.new_leads_contacted_count,
-        total_opportunities: data.total_opportunities,
-        total_opportunity_value: data.total_opportunity_value,
-        total_interested: data.total_interested,
-      });
-
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Webhook request error details:', {
-        error: (error as Error).message,
-        type: (error as Error).name,
-        stack: (error as Error).stack,
+        error: error.message,
+        type: error.name,
+        stack: error.stack,
         url: webhookUrl,
       });
 
@@ -107,9 +94,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
     return sendWebhookRequest(webhookUrl, 'fetch_initial_metrics');
   };
 
-  // Parse and update metrics from webhook data
   const updateMetricsFromWebhook = (webhookData: WebhookResponse | WebhookPayload) => {
-    // Convert all values to numbers (handles both string and number inputs)
     const parseNumber = (value: any): number => {
       if (value === null || value === undefined || value === '') return 0;
       const parsed = typeof value === 'string' ? parseInt(value, 10) : Number(value);
@@ -122,112 +107,50 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
       newLeadsContactedCount: parseNumber('newLeadsContactedCount' in webhookData ? webhookData.newLeadsContactedCount : webhookData.new_leads_contacted_count),
       totalOpportunities: parseNumber('totalOpportunities' in webhookData ? webhookData.totalOpportunities : webhookData.total_opportunities),
       totalOpportunityValue: parseNumber('totalOpportunityValue' in webhookData ? webhookData.totalOpportunityValue : webhookData.total_opportunity_value),
-      totalInterested: parseNumber('totalInterested' in webhookData ? webhookData.totalInterested : webhookData.total_opportunities), // Same as opportunities
+      totalInterested: parseNumber('totalInterested' in webhookData ? webhookData.totalInterested : webhookData.total_opportunities),
     };
 
     setMetricsData(newMetrics);
-
-    console.log('Dashboard updated with webhook data:', newMetrics);
   };
 
   const triggerWebhook = async (webhookUrl: string): Promise<WebhookResponse | null> => {
-    // Build payload to send to Make.com webhook
     const webhookData = await sendWebhookRequest(webhookUrl, 'refresh_dashboard');
-
     if (!webhookData) {
       throw new Error('Webhook did not return data. Please verify the Make.com scenario is active.');
     }
-
     return webhookData;
   };
 
   const handleRefresh = async () => {
-    console.log('🔄 Starting refresh process...');
-    console.log('Current domain:', window.location.origin);
-    
     const clientConfig = await getClientConfig(clientKey);
-
-    // Check if webhook is enabled and configured
     if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
       const webhookUrl = clientConfig.integrations.webhook.url;
-      
-      console.log('🌐 Webhook configured:', webhookUrl);
-
-      // Trigger webhook data collection and fetch results
       const webhookData = await triggerWebhook(webhookUrl);
-
       if (webhookData) {
-        console.log('✅ Webhook data received, updating dashboard...');
         updateMetricsFromWebhook(webhookData);
         return;
       }
-      const txt = await res.text();
-      try { return JSON.parse(txt); } catch { return { response: txt }; }
-    } catch (e:any) {
-      clearTimeout(timeout);
-      console.error('Make POST error:', e?.name, e?.message);
-      return null;
     }
-
-    // Fallback to simulated data
-    console.log('📊 Using simulated data for dashboard');
     const simulatedData = await simulateWebhookData();
     updateMetricsFromWebhook(simulatedData);
   };
 
-  // Fetch initial data on mount
   useEffect(() => {
     const loadInitialData = async () => {
-      console.log('🚀 Loading initial dashboard data...');
-      
       const clientConfig = await getClientConfig(clientKey);
-      
-      // Check if webhook is enabled and configured
       if (clientConfig?.integrations?.webhook?.enabled && clientConfig?.integrations?.webhook?.url) {
-        console.log('🌐 Loading initial webhook data...');
         const webhookData = await fetchWebhookData(clientConfig.integrations.webhook.url);
-
         if (webhookData) {
-          console.log('✅ Initial webhook data received, updating dashboard...');
           updateMetricsFromWebhook(webhookData);
           return;
         }
-        
-        console.log('⚠️ Webhook returned invalid data on initial load, falling back to simulated data');
-      } else {
-        console.log('ℹ️ Webhook not configured, using simulated data for initial load');
       }
-      
-      // Fallback to simulated data
-      console.log('📊 Using simulated data for initial load');
       const simulatedData = await simulateWebhookData();
       updateMetricsFromWebhook(simulatedData);
     };
-
     loadInitialData();
   }, [clientKey]);
 
-  const handleDateChange = (dates: [Date | null, Date | null]) => {
-    const [start, end] = dates;
-    setStartDate(start);
-    setEndDate(end);
-  };
-
-  const handleRefresh = async () => {
-    const data = await postToMake('refresh_dashboard');
-    if (data) { updateMetrics(data); return; }
-    const simulated = await simulateWebhookData(clientKey); updateMetrics(simulated);
-  };
-
-  useEffect(()=>{ (async()=>{
-    const initial = await fetchWebhookDataViaProxy();
-    if (initial) { updateMetrics(initial); return; }
-    const data = await postToMake('fetch_initial_metrics');
-    if (data) { updateMetrics(data); return; }
-    const simulated = await simulateWebhookData(clientKey); updateMetrics(simulated);
-  })(); }, [clientKey]);
-
-  const handleDateChange = (dates:[Date|null,Date|null])=>{ const [s,e]=dates; setStartDate(s); setEndDate(e); };
   const calculateDaysBetween = (s:Date|null,e:Date|null)=>{ if(!s||!e) return 0; return Math.ceil(Math.abs(e.getTime()-s.getTime())/(1000*60*60*24))+1; };
   const setQuickDateRange = (range:'last7days'|'last4weeks'|'last3months')=>{ const today=new Date(); const e=new Date(today); let s=new Date(today); if(range==='last7days') s.setDate(today.getDate()-6); if(range==='last4weeks') s.setDate(today.getDate()-27); if(range==='last3months') s.setMonth(today.getMonth()-3); setStartDate(s); setEndDate(e); };
 
@@ -257,7 +180,7 @@ export function EnhancedOverview({ clientKey }: EnhancedOverviewProps) {
               <button onClick={()=>setQuickDateRange('last4weeks')} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Last 4 Weeks</button>
               <button onClick={()=>setQuickDateRange('last3months')} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">Last 3 Months</button>
             </div>
-            <DateRangePicker startDate={startDate} endDate={endDate} onChange={handleDateChange} placeholderText="Select date range for analytics" />
+            <DateRangePicker startDate={startDate} endDate={endDate} onChange={(d)=>{ const [s,e]=d; setStartDate(s); setEndDate(e); }} placeholderText="Select date range for analytics" />
           </div>
           <div className="text-sm text-gray-500 mt-7">
             <p>Campaign started: 6 Aug 2025</p>
