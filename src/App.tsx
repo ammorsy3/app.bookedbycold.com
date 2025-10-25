@@ -21,9 +21,29 @@ function SiteFooter() { return (<footer className="py-8 mt-16 border-t border-gr
 
 function NovuInbox({ subscriberId }: { subscriberId: string }) {
   const inboxRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (!inboxRef.current || !subscriberId) return; const novu = new NovuUI({ options: { applicationIdentifier: 'TBnR4lUjfOLQ', subscriber: '68be39f13c95e3a79082a7a9' } }); novu.mountComponent({ name: 'Inbox', element: inboxRef.current }); return () => novu?.unmountComponent?.(); }, [subscriberId]);
+  useEffect(() => {
+    const componentElement = inboxRef.current;
+    // Return early if the ref isn't attached or if there's no subscriberId
+    if (!componentElement || !subscriberId) return;
+    const novu = new NovuUI({
+      options: {
+        // THE PRODUCTION KEY IDENTIFIER
+        applicationIdentifier: 'TBnR4lUjfOLQ',
+        // CORRECT: Use the subscriberId prop passed to the component
+        subscriber: '68be39f13c95e3a79082a7a9',
+      },
+    });
+    novu.mountComponent({
+      name: 'Inbox',
+      element: componentElement,
+    });
+    // Cleanup when the component unmounts or the subscriberId changes
+    return () => novu?.unmountComponent?.({ element: componentElement } as any);
+  // Add subscriberId to the dependency array to re-initialize if it changes
+  }, [subscriberId]); 
   return <div id="notification-inbox" ref={inboxRef} />;
 }
+
 
 function DashboardLayout({ clientKey }: { clientKey: string }) {
   const location = useLocation();

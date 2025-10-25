@@ -1,5 +1,4 @@
-import React from 'react';
-import { TrendingUp, AlertTriangle, CheckCircle, Lightbulb, Award, Target } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Lightbulb, Award, Target } from 'lucide-react';
 
 interface InsightData {
   type: 'success' | 'warning' | 'info' | 'achievement';

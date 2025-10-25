@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Mail, UserPlus, Target, DollarSign, MessageSquare, RefreshCw, AlertCircle } from 'lucide-react';
+import { TrendingUp, Mail, UserPlus, Target, DollarSign, MessageSquare } from 'lucide-react';
 import { formatNumber, formatCurrency } from '../utils/numberFormatter';
 
 export interface MetricData {
@@ -13,18 +12,13 @@ export interface MetricData {
 }
 
 interface DashboardMetricsProps {
-  clientKey: string;
   metrics: MetricData;
-  onRefresh?: () => void;
-  isRefreshing?: boolean;
-  nextRefreshTime?: number;
 }
 
-export function DashboardMetrics({ clientKey, metrics, onRefresh, isRefreshing, nextRefreshTime }: DashboardMetricsProps) {
+export function DashboardMetrics({ metrics }: DashboardMetricsProps) {
   const responseRate = ((metrics.replyCount / metrics.newLeadsContactedCount) * 100).toFixed(2);
   const opportunityRate = ((metrics.totalOpportunities / metrics.newLeadsContactedCount) * 100).toFixed(2);
   const avgOpportunityValue = (metrics.totalOpportunityValue / metrics.totalOpportunities).toFixed(0);
-  const engagementRate = (((metrics.replyCount + metrics.totalInterested) / metrics.newLeadsContactedCount) * 100).toFixed(2);
 
   const primaryMetrics = [
     {
