@@ -87,7 +87,7 @@ function NovuInbox({ subscriberId }: { subscriberId: string }) {
       element: componentElement,
     });
     // Cleanup when the component unmounts or the subscriberId changes
-    return () => novu?.unmountComponent?.({ element: componentElement });
+    return () => novu?.unmountComponent?.({ element: componentElement } as any);
   // Add subscriberId to the dependency array to re-initialize if it changes
   }, [subscriberId]); 
   return <div id="notification-inbox" ref={inboxRef} />;
