@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 
 interface RefreshButtonProps {
-  onRefresh: () => void;
+  onRefresh: () => Promise<void> | void;
   cooldownSeconds?: number;
 }
 
@@ -30,6 +30,43 @@ export function RefreshButton({ onRefresh, cooldownSeconds = 60 }: RefreshButton
     }
   }, [countdown]);
 
+  // Helper: fetch with timeout
+  const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs = 5000) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      return res;
+    } finally {
+      clearTimeout(id);
+    }
+  };
+
+  const triggerMakeWebhookAndWait = async () => {
+    try {
+      const res = await fetchWithTimeout(
+        'https://hook.us2.make.com/f36n7r86d2wd8xlq51pwqlbh4koagp8d',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({ source: 'app.bookedbycold.com', action: 'refresh_click', ts: new Date().toISOString() })
+        },
+        5500 // allow up to ~5.5s to accommodate network jitter
+      );
+
+      // Attempt to parse JSON; fall back to text
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        return { ok: res.ok, status: res.status, body: text };
+      }
+    } catch (e) {
+      console.warn('Make.com webhook request failed or timed out (~5s):', e);
+      return null;
+    }
+  };
+
   const handleRefresh = async () => {
     if (countdown > 0 || isRefreshing) return;
 
@@ -39,11 +76,16 @@ export function RefreshButton({ onRefresh, cooldownSeconds = 60 }: RefreshButton
     localStorage.setItem('lastDashboardRefresh', refreshTime.toString());
 
     try {
+      // Await webhook response (up to ~5s)
+      const webhookResponse = await triggerMakeWebhookAndWait();
+      if (webhookResponse) {
+        console.log('Make.com webhook response:', webhookResponse);
+      }
+
       await onRefresh();
       setCountdown(cooldownSeconds);
     } catch (error) {
       console.error('Refresh failed:', error);
-      // Still start cooldown even if refresh failed to prevent spam
       setCountdown(cooldownSeconds);
     } finally {
       setIsRefreshing(false);

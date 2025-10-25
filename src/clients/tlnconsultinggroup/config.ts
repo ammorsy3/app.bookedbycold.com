@@ -4,14 +4,15 @@ const config: ClientConfig = {
   key: 'tlnconsultinggroup',
   name: 'TLN Consulting Group',
   user: {
-    name: 'Travis Lairson',
-    email: 'travis.lairson@tlnconsultinggroup.com',
+    // Default user values are overridden at runtime from localStorage if available
+    name: (typeof window !== 'undefined' && localStorage.getItem('tlnconsultinggroupUserName')) || 'TLN User',
+    email: 'client@tlnconsultinggroup.com',
     initials: 'T',
     timezone: 'America/Chicago'
   },
   credentials: {
-    email: 'travis.lairson@tlnconsultinggroup.com',
-    password: 'A7med&Travis@TLN'
+    email: 'client@tlnconsultinggroup.com',
+    password: ''
   },
   integrations: {
     airtable: {
